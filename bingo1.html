@@ -20,6 +20,31 @@
           <input id="bingo-playlist-url" type="text" value="">
           <label for="bingo-playlist-url">Spotify Playlist-URL</label>
         </div>
+        
+    <!-- Checkbox: Discokugel aktivieren -->
+    <p>
+      <label>
+        <input type="checkbox" id="discokugel-checkbox"/>
+        <span>Discokugel aktivieren</span>
+      </label>
+    </p>
+
+    <!-- Container für optionale Kategorien, zunächst versteckt -->
+    <div id="categories-container" style="display:none; margin-top:10px;">
+      <h5>Mit welchen Kategorien möchtest du spielen? (optional)</h5>
+      <div class="input-field">
+        <input class="category-input" type="text">
+        <label>Kategorie eintragen</label>
+      </div>
+      <div class="button-group">
+        <button id="add-category" class="btn waves-effect waves-light blue">
+          <i class="material-icons left">add</i> Kategorie
+        </button>
+        <button id="remove-category" class="btn waves-effect waves-light red">
+          <i class="material-icons left">remove</i> Kategorie
+        </button>
+      </div>
+    </div>
         <button id="bingo-next-button" class="btn-large waves-effect waves-light green" style="margin-top:20px;">
           Weiter
         </button>
