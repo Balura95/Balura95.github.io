@@ -7,6 +7,8 @@
 
   <!-- Materialize CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"/>
+
+  <!-- Spotify SDK -->
   <script src="https://sdk.scdn.co/spotify-player.js"></script>
 
   <style>
@@ -14,85 +16,61 @@
       font-family: Roboto, sans-serif;
       background:#fafafa;
       min-height:100vh;
-      margin:0;
-      padding-bottom:100px;
       position:relative;
+      padding-bottom:100px;
+      margin:0;
     }
+    .center-area { margin-top: 10vh; text-align:center; }
 
-    .center-area {
-      margin-top: 12vh;
-      text-align: center;
+    /* Track details card */
+    #track-details {
+      cursor:pointer;
+      transition: background .2s;
+      margin: 0 auto;
+      max-width: 420px;
+      text-align: left;
+      padding: 16px;
     }
-
-    /* Lade-Text */
-    #loading-text {
-      margin-top: 30px;
-      font-weight: 500;
-      color: #555;
-      font-size: 1.2rem;
-    }
+    #track-details:hover { background: #f7f7f7; }
 
     /* Großer runder Start-Button */
     #start-btn {
-      display: none;
-      width: 130px;
-      height: 130px;
+      display: none; /* erscheint erst, wenn Playlist geladen */
+      width: 120px;
+      height: 120px;
+      line-height: 120px;
       border-radius: 50%;
       font-size: 18px;
-      line-height: 130px;
       padding: 0;
-      text-align: center;
-      box-shadow: 0 6px 14px rgba(0,0,0,0.2);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+      display: inline-block;
+      vertical-align: middle;
     }
 
-    /* Trackbereich */
-    #now-playing {
-      margin-top: 40px;
-    }
+    /* Lade-Text */
+    #loading-text { margin-top: 24px; font-weight:500; color:#616161; }
 
-    #now-playing-text {
-      font-size: 1.8rem;
-      font-weight: 700;
-      color: #2c3e50;
-      margin-bottom: 18px;
-    }
-
-    #track-details {
-      cursor:pointer;
-      background:#f5f5f5;
-      border-radius: 12px;
-      padding: 20px;
-      width: 90%;
-      max-width: 420px;
-      margin: 0 auto;
-      transition: background 0.3s;
-    }
-    #track-details:hover { background:#ececec; }
-
-    /* Weiter-Button innerhalb Songinfos */
-    .details-weiter-btn {
-      display: block;
-      margin: 18px auto 0;
-      width: 80%;
-      max-width: 340px;
-      text-align: center;
-      font-size: 1.1rem;
-    }
-
-    /* Zum Menü Button */
+    /* "Zum Menü"-Button ganz unten, mittig, kleiner */
     #menu-bottom-btn {
       position: fixed;
       left: 50%;
       transform: translateX(-50%);
       bottom: 14px;
-      z-index: 10;
-      padding: 8px 22px;
-      font-size: 15px;
-      border-radius: 25px;
+      z-index: 999;
+      padding: 6px 12px;
+      font-size: 14px;
+      border-radius: 20px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      opacity: 0.95;
+    }
+
+    /* Weiter-Button innerhalb der Details (zentral, breit, grün) */
+    .details-weiter-btn {
+      display: block;
+      margin: 14px auto 0;
+      width: 80%;
+      max-width: 340px;
+      text-align: center;
     }
 
     #empty-warning { margin-top: 24px; }
@@ -100,21 +78,22 @@
 </head>
 <body>
   <div class="container center-area">
+    <!-- kein Titel/Icons, nur UI-Elemente -->
 
-    <!-- Ladeanzeige -->
+    <!-- Lade-Text sichtbar bis Playlist geladen ist -->
     <div id="loading-text">Playlist wird geladen…</div>
 
-    <!-- Runder Startbutton -->
-    <button id="start-btn" class="btn-large green waves-effect waves-light">
+    <!-- Großer runder Start-Button (erscheint erst nach erfolgreichem Laden) -->
+    <button id="start-btn" class="btn-large green waves-effect waves-light" aria-label="Start">
       Start
     </button>
 
-    <!-- Spielanzeige -->
-    <div id="now-playing" style="display:none;">
-      <div id="now-playing-text">Song läuft …</div>
+    <div id="now-playing" style="display:none; margin-top:30px;">
+      <div id="now-playing-text" style="font-weight:600; margin-bottom:12px;">Song läuft …</div>
 
-      <div id="track-details" class="card-panel">
+      <div id="track-details" class="card-panel grey lighten-4">
         Songinfos auflösen
+        <!-- Der "Weiter"-Button wird dynamisch hier eingefügt (klasse: details-weiter-btn) -->
       </div>
     </div>
 
@@ -124,12 +103,10 @@
     </div>
   </div>
 
-  <!-- Menü-Button -->
-  <a id="menu-bottom-btn" class="btn orange waves-effect waves-light" href="menu.html">
-    Zum Menü
-  </a>
+  <!-- "Zum Menü" ganz unten mittig (kleiner, sodass er nicht versehentlich gedrückt wird) -->
+  <a id="menu-bottom-btn" class="btn orange waves-effect waves-light" href="menu.html" title="Zurück zum Menü">Zum Menü</a>
 
-  <!-- Scripts -->
+  <!-- Materialize JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
   <script src="bingo-start.js" defer></script>
 </body>
