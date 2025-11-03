@@ -5,52 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Bingo Musikspiel</title>
 
-  <!-- Materialize CSS -->
+  <!-- Materialize -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
 
   <!-- Spotify SDK -->
   <script src="https://sdk.scdn.co/spotify-player.js"></script>
 
   <style>
-    body {
-      font-family: Roboto, sans-serif;
-      background:#fafafa;
-      min-height:100vh;
-      position:relative;
-      padding-bottom:100px;
-      margin:0;
-    }
+    body { font-family: Roboto, sans-serif; background:#fafafa; min-height:100vh; position:relative; padding-bottom:100px; }
     .center-area { margin-top: 10vh; text-align:center; }
-
-    /* Track details card */
-    #track-details {
-      cursor:pointer;
-      transition: background .2s;
-      margin: 0 auto;
-      max-width: 420px;
-      text-align: left;
-      padding: 16px;
-    }
-    #track-details:hover { background: #f7f7f7; }
+    #track-details { cursor:pointer; transition: background .2s; margin: 0 auto; max-width: 380px; }
+    #track-details:hover { background: #f1f1f1; }
 
     /* Großer runder Start-Button */
     #start-btn {
-      display: none; /* erscheint erst, wenn Playlist geladen */
+      display: none; /* erscheint erst wenn Playlist geladen */
       width: 120px;
       height: 120px;
       line-height: 120px;
       border-radius: 50%;
-      font-size: 18px;
+      font-size: 20px;
       padding: 0;
       box-shadow: 0 6px 14px rgba(0,0,0,0.15);
       display: inline-block;
       vertical-align: middle;
     }
 
-    /* Lade-Text */
+    /* Platz für Lade-Text */
     #loading-text { margin-top: 24px; font-weight:500; color:#616161; }
 
-    /* "Zum Menü"-Button ganz unten, mittig, kleiner */
+    /* "Zum Menü"-Button ganz unten, mittig, unauffälliger */
     #menu-bottom-btn {
       position: fixed;
       left: 50%;
@@ -64,23 +49,15 @@
       opacity: 0.95;
     }
 
-    /* Weiter-Button innerhalb der Details (zentral, breit, grün) */
-    .details-weiter-btn {
-      display: block;
-      margin: 14px auto 0;
-      width: 80%;
-      max-width: 340px;
-      text-align: center;
-    }
-
+    /* Warn-Box wenn Playlist fehlt */
     #empty-warning { margin-top: 24px; }
   </style>
 </head>
 <body>
   <div class="container center-area">
-    <!-- kein Titel/Icons, nur UI-Elemente -->
+    <h4>🎶 Bingo Musikspiel</h4>
 
-    <!-- Lade-Text sichtbar bis Playlist geladen ist -->
+    <!-- Lade-Text sichtbar, solange Playlist geladen wird -->
     <div id="loading-text">Playlist wird geladen…</div>
 
     <!-- Großer runder Start-Button (erscheint erst nach erfolgreichem Laden) -->
@@ -89,11 +66,14 @@
     </button>
 
     <div id="now-playing" style="display:none; margin-top:30px;">
-      <div id="now-playing-text" style="font-weight:600; margin-bottom:12px;">Song läuft …</div>
+      <h5 id="now-playing-text">🎵 Song läuft ...</h5>
 
-      <div id="track-details" class="card-panel grey lighten-4">
+      <div id="track-details" class="card-panel grey lighten-4" style="margin-top:20px;">
         Songinfos auflösen
-        <!-- Der "Weiter"-Button wird dynamisch hier eingefügt (klasse: details-weiter-btn) -->
+      </div>
+
+      <div style="margin-top:20px;">
+        <button id="next-btn" class="btn blue waves-effect waves-light">Weiter</button>
       </div>
     </div>
 
