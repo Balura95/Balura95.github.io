@@ -1,34 +1,46 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Bingo Musikspiel</title>
 
   <!-- Materialize -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link rel="stylesheet" href="bingo-start.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles.css"/>
 
   <!-- Spotify SDK -->
   <script src="https://sdk.scdn.co/spotify-player.js"></script>
+  <style>
+    body { font-family: Roboto, sans-serif; background:#fafafa; }
+    #track-details { cursor:pointer; transition: background .2s; }
+    #track-details:hover { background: #f1f1f1; }
+    #now-playing { margin-top: 30px; }
+  </style>
 </head>
 <body>
-
-  <div class="container center-align" style="margin-top: 15vh;">
+  <div class="container center-align" style="margin-top: 12vh;">
     <h4>🎶 Bingo Musikspiel</h4>
 
     <button id="start-btn" class="btn-large green waves-effect waves-light">Start</button>
 
-    <div id="now-playing" style="display:none; margin-top:30px;">
-      <h5>🎵 Song läuft ...</h5>
-      <div id="track-details" class="card-panel grey lighten-4" style="margin-top:20px; cursor:pointer;">
+    <div id="now-playing" style="display:none;">
+      <h5 id="now-playing-text">🎵 Song läuft ...</h5>
+
+      <div id="track-details" class="card-panel grey lighten-4" style="margin-top:20px;">
         Songinfos auflösen
       </div>
 
-      <button id="next-btn" class="btn blue waves-effect waves-light" style="margin-top:20px;">
-        Weiter
-      </button>
+      <div style="margin-top:20px;">
+        <button id="next-btn" class="btn blue waves-effect waves-light">Weiter</button>
+        <a href="menu.html" class="btn orange waves-effect waves-light" style="margin-left:10px;">Zum Menü</a>
+      </div>
+    </div>
+
+    <div id="empty-warning" style="display:none; margin-top:20px;">
+      <p class="red-text">Keine gültigen Songs in der Playlist gefunden.</p>
+      <a href="bingo1.html" class="btn">Playlist bearbeiten</a>
     </div>
   </div>
 
