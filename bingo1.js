@@ -36,36 +36,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
 document.addEventListener('DOMContentLoaded', () => {
   const checkbox = document.getElementById('discokugel-checkbox');
+  const categoriesWrapper = document.getElementById('categories-wrapper');
   const categoriesContainer = document.getElementById('categories-container');
+  const addBtn = document.getElementById('add-category');
+  const removeBtn = document.getElementById('remove-category');
 
+  // Checkbox: Kategorien ein-/ausblenden
   checkbox.addEventListener('change', () => {
-    if (checkbox.checked) {
-      categoriesContainer.style.display = 'block';
-    } else {
-      categoriesContainer.style.display = 'none';
-    }
+    categoriesWrapper.style.display = checkbox.checked ? 'block' : 'none';
   });
 
   // Kategorie hinzufügen
-  document.getElementById('add-category').addEventListener('click', () => {
-    const container = document.getElementById('categories-container');
+  addBtn.addEventListener('click', () => {
     const div = document.createElement('div');
     div.className = 'input-field';
     div.innerHTML = '<input class="category-input" type="text"><label>Weitere Kategorie hinzufügen</label>';
-    container.appendChild(div);
+    categoriesContainer.appendChild(div);
     div.querySelector('.category-input').focus();
   });
 
   // Kategorie entfernen
-  document.getElementById('remove-category').addEventListener('click', () => {
-    const container = document.getElementById('categories-container');
-    const fields = container.querySelectorAll('.input-field');
+  removeBtn.addEventListener('click', () => {
+    const fields = categoriesContainer.querySelectorAll('.input-field');
     if (fields.length > 1) {
       fields[fields.length - 1].remove();
     }
   });
 
-  // Weiter-Button speichert Playlist + Kategorien
+  // Weiter-Button: Nur Playlist speichern, keine Kategorien-Funktionen aktiv
   document.getElementById('next-button').addEventListener('click', () => {
     const playlistUrl = document.getElementById('playlist-url').value.trim();
     if (!playlistUrl) {
@@ -74,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     localStorage.setItem('bingoPlaylistUrl', playlistUrl);
 
+    // Optional: Kategorien speichern, aber aktuell noch ohne Logik im Startspiel
     if (checkbox.checked) {
       const catInputs = document.querySelectorAll('.category-input');
       let categories = [];
