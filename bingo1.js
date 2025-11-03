@@ -1,32 +1,70 @@
+// bingo1.js
 document.addEventListener('DOMContentLoaded', () => {
-  const nextButton = document.getElementById('bingo-next-button');
-  const input = document.getElementById('bingo-playlist-url');
+  const input = document.getElementById('playlist-url');
+  const checkbox = document.getElementById('discokugel-checkbox');
+  const categoriesWrapper = document.getElementById('categories-wrapper');
+  const categoriesContainer = document.getElementById('categories-container');
+  const addBtn = document.getElementById('add-category');
+  const removeBtn = document.getElementById('remove-category');
+  const nextBtn = document.getElementById('next-button');
 
-  // Falls bereits eine bingoPlaylistUrl existiert, vorbefüllen:
+  // Vorbefüllen: falls bereits gespeichert (bingoPlaylistUrl oder mobilePlaylistUrl)
   const existing = localStorage.getItem('bingoPlaylistUrl') || localStorage.getItem('mobilePlaylistUrl') || '';
-  if (existing) {
+  if (existing && input) {
     input.value = existing;
-    // Materialize label fix:
-    M.updateTextFields();
+    if (window.M && typeof M.updateTextFields === 'function') M.updateTextFields();
   }
 
-  nextButton.addEventListener('click', () => {
-    const playlistUrl = input.value.trim();
+  // Checkbox toggelt Kategorien-Wrapper
+  if (checkbox && categoriesWrapper) {
+    checkbox.addEventListener('change', () => {
+      categoriesWrapper.style.display = checkbox.checked ? 'block' : 'none';
+    });
+  }
 
+  // Kategorie hinzufügen (Buttons bewegen sich, weil sie innerhalb wrapper sind)
+  if (addBtn && categoriesContainer) {
+    addBtn.addEventListener('click', () => {
+      const div = document.createElement('div');
+      div.className = 'input-field';
+      div.innerHTML = '<input class="category-input" type="text"><label>Weitere Kategorie eintragen</label>';
+      categoriesContainer.appendChild(div);
+      // Materialize: update labels (falls vorhanden)
+      if (window.M && typeof M.updateTextFields === 'function') M.updateTextFields();
+      div.querySelector('.category-input').focus();
+    });
+  }
+
+  // Kategorie entfernen
+  if (removeBtn && categoriesContainer) {
+    removeBtn.addEventListener('click', () => {
+      const fields = categoriesContainer.querySelectorAll('.input-field');
+      if (fields.length > 1) {
+        fields[fields.length - 1].remove();
+      }
+    });
+  }
+
+  // Weiter-Button: speichert Playlist + Kategorien (nur UI; Bingo-Start nutzt nur bingoPlaylistUrl)
+  nextBtn.addEventListener('click', () => {
+    const playlistUrl = input.value.trim();
     if (!playlistUrl) {
-      M.toast({ html: "Bitte eine Playlist-URL eingeben", classes: "rounded", displayLength: 2000 });
+      if (window.M) M.toast({ html: "Bitte Playlist URL eingeben", classes: "rounded", displayLength: 2000 });
       return;
     }
-
-    // Speichern unter eigenem Key
     localStorage.setItem('bingoPlaylistUrl', playlistUrl);
 
-    // Prüfe Spotify-Login
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      M.toast({ html: "Spotify-Login erforderlich – du wirst weitergeleitet", classes: "rounded", displayLength: 2200 });
-      setTimeout(() => { window.location.href = 'index.html'; }, 1400);
-      return;
+    // Kategorien optional speichern (nur UI; werden aktuell nicht im Player ausgewertet)
+    if (checkbox && checkbox.checked) {
+      const catInputs = categoriesContainer.querySelectorAll('.category-input');
+      const cats = [];
+      catInputs.forEach(i => {
+        const v = i.value.trim();
+        if (v) cats.push(v);
+      });
+      localStorage.setItem('bingoCategories', JSON.stringify(cats));
+    } else {
+      localStorage.setItem('bingoCategories', JSON.stringify([]));
     }
 
     // Weiter zu bingo-start.html
