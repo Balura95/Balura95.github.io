@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bingo Musikspiel</title>
+
+  <!-- Materialize -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="bingo-start.css">
+
+  <!-- Spotify SDK -->
+  <script src="https://sdk.scdn.co/spotify-player.js"></script>
+</head>
+<body>
+
+  <div class="container center-align" style="margin-top: 15vh;">
+    <h4>🎶 Bingo Musikspiel</h4>
+
+    <button id="start-btn" class="btn-large green waves-effect waves-light">Start</button>
+
+    <div id="now-playing" style="display:none; margin-top:30px;">
+      <h5>🎵 Song läuft ...</h5>
+      <div id="track-details" class="card-panel grey lighten-4" style="margin-top:20px; cursor:pointer;">
+        Songinfos auflösen
+      </div>
+
+      <button id="next-btn" class="btn blue waves-effect waves-light" style="margin-top:20px;">
+        Weiter
+      </button>
+    </div>
+  </div>
+
+  <!-- Materialize JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script src="bingo-start.js" defer></script>
+</body>
+</html>
