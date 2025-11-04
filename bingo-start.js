@@ -155,29 +155,28 @@ function drawWheel(){
   }
 }
 
-// === Drehanimation mit realer Kategorie-Bestimmung (3s & korrekte Ausführung) ===
-function spinWheel() {
-  return new Promise(resolve => {
-    const canvas = document.getElementById('wheel-canvas');
-    const count = categories.length;
-    const arc = 360 / count;
+// Drehanimation mit realer Kategorie-Bestimmung
+function spinWheel(){
+  return new Promise(resolve=>{
+    const canvas=document.getElementById('wheel-canvas');
+    const count=categories.length;
+    const arc=360/count;
 
-    const spin = 720 + Math.floor(Math.random() * 360); // 2 volle Umdrehungen + Zufall
-    const startRotation = rotation;
-    const targetRotation = startRotation + spin;
-    const startTime = performance.now();
-    const duration = 3000; // 🔸 nur 3 Sekunden
+    const spin=3600 + Math.floor(Math.random()*360);
+    const startRotation=rotation;
+    const targetRotation=startRotation+spin;
+    const startTime=performance.now();
+    const duration=5000;
 
-    function animate(now) {
-      const elapsed = now - startTime;
-      const t = Math.min(elapsed / duration, 1);
-      const ease = 1 - Math.pow(1 - t, 3);
-      const current = startRotation + (spin * ease);
-      canvas.style.transform = `rotate(${current}deg)`;
-      if (t < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        rotation = targetRotation;
+    function animate(now){
+      const elapsed=now-startTime;
+      const t=Math.min(elapsed/duration,1);
+      const ease=1 - Math.pow(1-t,3);
+      const current=startRotation + (spin*ease);
+      canvas.style.transform=`rotate(${current}deg)`;
+      if(t<1) requestAnimationFrame(animate);
+      else{
+        rotation=targetRotation;
         const normalized = ((rotation % 360) + 360) % 360;
         const index = Math.floor((count - (normalized / arc)) % count);
         const category = categories[index];
@@ -187,8 +186,6 @@ function spinWheel() {
     requestAnimationFrame(animate);
   });
 }
-
-
 
 // === Pulsieren + Buzzer ===
 function pulseWheel(){
