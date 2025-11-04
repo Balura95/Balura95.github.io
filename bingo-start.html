@@ -10,21 +10,32 @@
   <script src="https://sdk.scdn.co/spotify-player.js"></script>
 
   <style>
+    :root{
+      --wheel-size: min(90vw, 400px);
+    }
     body {
       font-family: Roboto, sans-serif;
       background: #fafafa;
       margin: 0;
-      height: 100vh;
+      min-height: 100vh;
+      padding-bottom: 80px;
       display: flex;
-      flex-direction: column;
       justify-content: center;
-      align-items: center;
+      align-items: flex-start;
     }
-    #loading-text {
-      margin-top: 10px;
-      font-size: 1.1rem;
-      color: #555;
+
+    .center-area {
+      width: 100%;
+      max-width: 920px;
+      padding: 28px;
+      box-sizing: border-box;
+      margin: 0 auto;
+      text-align: center;
     }
+
+    #loading-text { margin-top: 12px; font-size: 1.05rem; color: #555; }
+
+    /* Start button hidden until playlist loaded */
     #start-btn {
       display: none;
       width: 130px;
@@ -35,117 +46,121 @@
       box-shadow: 0 6px 14px rgba(0,0,0,0.16);
     }
 
-    /* Glücksrad */
+    /* Wheel container responsive */
     #wheel-container {
       display: none;
-      margin-top: 30px;
-      width: 400px;
-      height: 400px;
+      margin: 18px auto;
+      width: var(--wheel-size);
+      height: var(--wheel-size);
       position: relative;
       border-radius: 50%;
       overflow: visible;
-      transition: box-shadow 0.3s;
+      transition: box-shadow 0.25s;
+      background: radial-gradient(circle at 50% 35%, rgba(255,255,255,0.04), rgba(0,0,0,0.02));
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
     }
+
+    /* Canvas is scaled via JS for DPR; CSS makes it responsive */
     #wheel-canvas {
       width: 100%;
       height: 100%;
+      display: block;
       border-radius: 50%;
-      background: white;
+      background: transparent;
       transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1);
+      transform-origin: 50% 50%;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    /* Pfeil nach unten */
+    /* Pointer (arrow) - shows tip downwards */
     #wheel-pointer {
       position: absolute;
-      top: -40px;
+      top: -28px;
       left: 50%;
-      transform: translateX(-50%) rotate(0deg);
+      transform: translateX(-50%) rotate(0deg); /* no rotation: tip points downward via border-bottom */
       width: 0;
       height: 0;
       border-left: 16px solid transparent;
       border-right: 16px solid transparent;
-      border-bottom: 28px solid #e53935;
-      z-index: 20;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+      border-bottom: 28px solid #e53935; /* tip points down */
+      z-index: 30;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
     }
 
     #selected-category {
-      font-size: 1.3rem;
       margin-top: 12px;
+      font-size: 1.2rem;
       font-weight: 600;
       color: #333;
       text-align: center;
+      min-height: 1.4em;
     }
 
-    #now-playing {
-      margin-top: 36px;
-      display: none;
-      text-align: center;
-    }
-    #now-playing-text {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #222;
-      margin-bottom: 18px;
-    }
+    #now-playing { margin-top: 20px; display: none; text-align: center; }
+    #now-playing-text { font-size: 1.8rem; font-weight: 700; color: #222; margin-bottom: 10px; }
+
+    /* Track details box — center text */
     #track-details {
       background: #f5f5f5;
       border-radius: 12px;
-      padding: 18px;
+      padding: 16px;
       width: 90%;
-      max-width: 460px;
+      max-width: 520px;
       margin: 0 auto;
-      text-align: center;
+      text-align: center; /* centered */
       cursor: pointer;
-      transition: background 0.3s;
     }
-    #track-details:hover {
-      background: #ececec;
-    }
+    #track-details:hover { background: #ececec; }
+
     .details-weiter-btn {
-      display: block;
-      margin: 18px auto 0;
+      display:block;
+      margin: 14px auto 0;
       width: 80%;
       max-width: 360px;
-      font-size: 1.05rem;
+      font-size: 1.02rem;
     }
 
-    /* Pulsationsanimationen */
-    @keyframes pulse-yellow {
-      0%,100% { box-shadow: 0 0 0 0 rgba(255,255,0,0.7); }
-      50% { box-shadow: 0 0 40px 20px rgba(255,255,0,0.45); }
-    }
-    @keyframes pulse-red {
-      0%,100% { box-shadow: 0 0 0 0 rgba(255,0,0,0.7); }
-      50% { box-shadow: 0 0 40px 20px rgba(255,0,0,0.45); }
-    }
+    /* softer pastel palette for wheel */
+    /* Pulsation animations applied to wheel-container to avoid conflicts with transform on canvas */
+    @keyframes pulse-yellow { 0%,100%{box-shadow:0 0 0 0 rgba(255,255,0,0.55);} 50%{box-shadow:0 0 36px 18px rgba(255,255,0,0.35);} }
+    @keyframes pulse-red    { 0%,100%{box-shadow:0 0 0 0 rgba(255,0,0,0.55);} 50%{box-shadow:0 0 36px 18px rgba(255,0,0,0.35);} }
     .pulse-yellow { animation: pulse-yellow 1s infinite; }
-    .pulse-red { animation: pulse-red 1s infinite; }
+    .pulse-red    { animation: pulse-red 1s infinite; }
 
-    /* Menü-Button zentriert */
+    /* Zum Menü — keep in same place but center text inside button */
     #menu-bottom-btn {
       position: fixed;
       left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 20;
-      padding: 10px 30px;
-      border-radius: 30px;
+      bottom: 14px;
+      transform: translateX(-50%);
+      z-index: 40;
+      padding: 8px 22px;
+      border-radius: 25px;
+      display:flex;
+      align-items:center;
+      justify-content:center; /* centers the button text */
+    }
+
+    /* small screens: make wheel a bit smaller gap */
+    @media (max-width:420px){
+      :root{ --wheel-size: min(92vw, 360px); }
+      #start-btn { width: 110px; height:110px; line-height:110px; }
     }
   </style>
 </head>
 <body>
-  <div class="container center-align">
+  <div class="center-area">
     <div id="loading-text">Playlist wird geladen…</div>
+
     <button id="start-btn" class="btn-large green">Start</button>
 
-    <div id="wheel-container">
-      <div id="wheel-pointer"></div>
-      <canvas id="wheel-canvas" width="400" height="400"></canvas>
-      <div id="selected-category"></div>
+    <div id="wheel-container" aria-hidden="true">
+      <div id="wheel-pointer" aria-hidden="true"></div>
+      <canvas id="wheel-canvas" role="img" aria-label="Glücksrad"></canvas>
+      <div id="selected-category" aria-live="polite"></div>
     </div>
 
-    <div id="now-playing">
+    <div id="now-playing" aria-live="polite">
       <div id="now-playing-text">Song läuft …</div>
       <div id="track-details">Songinfos auflösen</div>
     </div>
@@ -158,6 +173,7 @@
 
   <a id="menu-bottom-btn" class="btn orange" href="menu.html">Zum Menü</a>
 
+  <!-- Buzzersound -->
   <audio id="buzzer-sound" src="https://cdn.pixabay.com/download/audio/2021/09/06/audio_4cf0e1b5b6.mp3?filename=buzzer-40426.mp3" preload="auto"></audio>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
