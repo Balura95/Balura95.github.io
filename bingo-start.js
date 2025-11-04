@@ -207,17 +207,19 @@ function spinWheel(){
   });
 }
 
-/* Pulsation: gelb 15s -> rot 5s */
-/* Pulsation: gelb 15s -> rot 5s */
+/* Pulsation: gelb 15s -> rot 5s -> Buzzersound -> Stop */
 function pulseWheel(){
   return new Promise(resolve => {
     const wheelContainer = document.getElementById('wheel-container');
+    const buzzer = document.getElementById('buzzer-sound');
     wheelContainer.classList.add('pulse-yellow');
     setTimeout(() => {
       wheelContainer.classList.remove('pulse-yellow');
       wheelContainer.classList.add('pulse-red');
       setTimeout(() => {
         wheelContainer.classList.remove('pulse-red');
+        buzzer.currentTime = 0;
+        buzzer.play().catch(()=>{}); // spielt Signalton ab
         resolve();
       }, 5000);
     }, 15000);
@@ -274,89 +276,67 @@ function resetAfterSong(){
 }
 
 /* ---------- Init / Event wiring ---------- */
-document.addEventListener('DOMContentLoaded', async () => {
-  const token = localStorage.getItem('access_token');
-  if(!token){ window.location.href = 'index.html'; return; }
+document.addEventListener('DOMContentLoaded', async()=>{
+  const token=localStorage.getItem('access_token'); 
+  if(!token){ window.location.href='index.html'; return; }
+  const loadingText=document.getElementById('loading-text');
+  const startBtn=document.getElementById('start-btn');
+  const wheelContainer=document.getElementById('wheel-container');
+  const selectedCategoryDiv=document.getElementById('selected-category');
+  const wheelCanvas=document.getElementById('wheel-canvas');
+  wheelCtx=wheelCanvas.getContext('2d');
 
-  const loadingText = document.getElementById('loading-text');
-  const startBtn = document.getElementById('start-btn');
-  const wheelContainer = document.getElementById('wheel-container');
-  wheelCanvas = document.getElementById('wheel-canvas');
-
-  const playlistUrl = localStorage.getItem('bingoPlaylistUrl') || localStorage.getItem('mobilePlaylistUrl') || '';
+  const playlistUrl = localStorage.getItem('bingoPlaylistUrl')||localStorage.getItem('mobilePlaylistUrl')||'';
   const playlistId = extractPlaylistId(playlistUrl);
-  if(!playlistId){
-    if(window.M) M.toast({ html: 'Keine gültige Playlist gefunden. Bitte Playlist eintragen.', classes: 'rounded' });
-    document.getElementById('empty-warning').style.display = 'block';
-    return;
-  }
+  if(!playlistId){ if(window.M) M.toast({html:'Keine gültige Playlist',classes:'rounded'}); return; }
 
-  loadingText.style.display = 'block';
+  loadingText.style.display='block';
   cachedPlaylistTracks = await fetchPlaylistTracks(playlistId);
-  loadingText.style.display = 'none';
-  if(!cachedPlaylistTracks || cachedPlaylistTracks.length === 0){
-    document.getElementById('empty-warning').style.display = 'block';
-    return;
-  }
+  loadingText.style.display='none';
 
-  // Lese Kategorien aus localStorage (bingoCategories)
+  if(!cachedPlaylistTracks.length){ document.getElementById('empty-warning').style.display='block'; return; }
+  startBtn.style.display='inline-block'; // jetzt sichtbar
+
   categories = localStorage.getItem('bingoCategories') ? JSON.parse(localStorage.getItem('bingoCategories')) : [];
-  const discokugelActive = categories && categories.length > 0;
+  const discokugelActive = categories.length>0;
 
   if(discokugelActive){
-    // draw wheel initially so it looks ready
-    drawWheel();
-
-    // Start-Button: erst jetzt sichtbar (oder bereits angezeigt); On click -> zeige wheel-Container (rad erscheint), aber kein Song vor Dreh
-    startBtn.addEventListener('click', () => {
-      startBtn.style.display = 'none';
-      wheelContainer.style.display = 'block';
-      document.getElementById('selected-category').style.display = 'none';
-      // ensure wheel drawn & pointer visible
+    startBtn.addEventListener('click', ()=>{
+      startBtn.style.display='none';
+      wheelContainer.style.display='block';
       drawWheel();
 
-      // add click listener on canvas (only once)
-      const onWheelClick = async () => {
-        try {
-          if(!hasSpun){
-            // spin and wait for end
-            const idx = await spinWheel(); // resolves when transition end
-            selectedCategoryIndex = idx;
-            // after spin finished -> start song and show selected category
-            await startSongAfterSpin();
-            // set hasSpun true handled by spinWheel
-          } else if(!hasPulsed){
-            // If already spun (song playing) and user clicks wheel -> pulse + stop
-            await pulseWheel();
-            await stopPlayback();
-            hasPulsed = true;
-            if(window.M) M.toast({ html: 'Song gestoppt', classes: 'rounded' });
-          } else {
-            // both spun & pulsed already -> ignore until Weiter pressed
-            if(window.M) M.toast({ html: 'Bitte auf "Weiter" drücken, um die nächste Runde zu starten.', classes: 'rounded', displayLength: 2000 });
-          }
-        } catch (err) {
-          console.error('Wheel click error', err);
+      wheelCanvas.addEventListener('click', async()=>{
+        if(!hasSpun){
+          const category = spinWheel();
+          selectedCategoryDiv.textContent = '';
+          setTimeout(async ()=>{
+            selectedCategoryDiv.textContent = "Kategorie: " + category;
+            const track = getRandomTrack(cachedPlaylistTracks);
+            if(!track || !track.track) return;
+            selectedTrackUri = track.track.uri;
+            await playTrack(selectedTrackUri);
+            updateTrackDetailsElement(track.track);
+            document.getElementById('now-playing').style.display='block';
+            cachedPlaylistTracks = cachedPlaylistTracks.filter(x=>x.track && x.track.uri !== selectedTrackUri);
+            hasSpun = true;
+            hasPulsed = false;
+          }, 5000); // Song startet nach Ende der Drehung
+          return;
         }
-      };
 
-      // attach once but persistent for the session
-      wheelCanvas.addEventListener('click', onWheelClick);
+        if(!hasPulsed){
+          await pulseWheel();
+          await stopPlayback();
+          hasPulsed = true;
+        }
+      });
     });
   } else {
-    // Discokugel nicht aktiv: Verhalten wie vorher (kein Rad)
-    startBtn.addEventListener('click', async () => {
-      startBtn.style.display = 'none';
-      // Start a song immediately (kein spin)
-      const item = getRandomTrack(cachedPlaylistTracks);
-      if(!item || !item.track){ if(window.M) M.toast({ html: 'Kein Song verfügbar', classes: 'rounded' }); return; }
-      selectedTrackUri = item.track.uri;
-      const ok = await playTrack(selectedTrackUri);
-      if(!ok && window.M) M.toast({ html: 'Fehler beim Abspielen des Songs', classes: 'rounded' });
-      updateTrackDetailsElement(item.track);
-      document.getElementById('now-playing').style.display = 'block';
-      // remove played
-      cachedPlaylistTracks = cachedPlaylistTracks.filter(x => x.track && x.track.uri !== selectedTrackUri);
+    startBtn.addEventListener('click', async()=>{
+      startBtn.style.display='none';
+      handleNextSong();
+      document.getElementById('now-playing').style.display='block';
     });
   }
 });
