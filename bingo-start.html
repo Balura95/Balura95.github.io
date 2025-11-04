@@ -56,17 +56,17 @@
       transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1);
     }
 
-    /* Pfeil nach unten */
+    /* 🔽 Pfeil korrekt nach unten drehend */
     #wheel-pointer {
       position: absolute;
-      top: -25px;
+      top: -28px;
       left: 50%;
-      transform: translateX(-50%) rotate(180deg);
+      transform: translateX(-50%) rotate(0deg); /* Spitze zeigt jetzt wirklich nach unten */
       width: 0;
       height: 0;
       border-left: 16px solid transparent;
       border-right: 16px solid transparent;
-      border-top: 28px solid #e53935;
+      border-bottom: 28px solid #e53935; /* nach unten gerichtet */
       z-index: 20;
       filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
     }
@@ -121,15 +121,22 @@
     .pulse-yellow { animation: pulse-yellow 1s infinite; }
     .pulse-red { animation: pulse-red 1s infinite; }
 
-    /* Menü-Button unten mittig */
+    /* 🟠 Menü-Button mittig zentriert */
     #menu-bottom-btn {
       position: fixed;
       left: 50%;
       bottom: 14px;
       transform: translateX(-50%);
       z-index: 20;
-      padding: 8px 22px;
+      padding: 0;
       border-radius: 25px;
+      width: 160px;
+      height: 45px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      font-size: 1rem;
     }
   </style>
 </head>
