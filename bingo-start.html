@@ -12,115 +12,144 @@
   <script src="https://sdk.scdn.co/spotify-player.js"></script>
 
   <style>
-    body { font-family: Roboto, sans-serif; background:#fafafa; margin:0; min-height:100vh; padding-bottom:110px; }
-    .center-area { text-align:center; margin-top:10vh; }
-
-    #loading-text { margin-top: 18px; font-size:1.1rem; color:#555; }
-
-    /* Großer runder Start-Button */
-    #start-btn { display:none; width:130px; height:130px; border-radius:50%; font-size:18px; line-height:130px; padding:0; box-shadow: 0 6px 14px rgba(0,0,0,0.16); }
-
-    /* Wheel (Discokugel) */
-    #wheel-container { margin: 22px auto 0; width: 300px; height: 300px; position: relative; display: none; }
-    #wheel { width:100%; height:100%; border-radius:50%; position:relative; transform: rotate(0deg); transition: transform 3s cubic-bezier(.25,.9,.1,1); box-shadow: 0 8px 20px rgba(0,0,0,0.12); overflow: hidden; }
-
-    /* Labels auf dem Rad - zentral ausgerichtet */
-    .wheel-label {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform-origin: 0 0;
-      font-size: 0.95rem;
-      white-space: nowrap;
-      pointer-events: none;
-      text-align: center;
-      width: 40%;
+    body {
+      font-family: Roboto, sans-serif;
+      background:#fafafa;
+      margin:0;
+      min-height:100vh;
+      padding-bottom:110px;
     }
 
-    /* Pointer (oben) */
+    .center-area { text-align:center; margin-top:8vh; }
+
+    #loading-text { margin-top:18px; font-size:1.1rem; color:#555; }
+
+    #start-btn {
+      display:none;
+      width:130px; height:130px;
+      border-radius:50%;
+      font-size:18px;
+      line-height:130px;
+      padding:0;
+      box-shadow:0 6px 14px rgba(0,0,0,0.16);
+    }
+
+    /* Wheel area */
+    #wheel-section { margin-top: 40px; display:none; }
+    #spin-title {
+      font-size: 1.6rem;
+      font-weight:700;
+      color:#222;
+      margin-bottom: 20px;
+    }
+    #wheel-container {
+      margin: 0 auto;
+      width: 300px; height: 300px;
+      position: relative;
+    }
+    #wheel {
+      width:100%; height:100%;
+      border-radius:50%;
+      overflow:hidden;
+      position:relative;
+      transition: transform 3s cubic-bezier(.25,.9,.1,1);
+      transform: rotate(0deg);
+      box-shadow:0 8px 18px rgba(0,0,0,0.15);
+    }
+    .wheel-label {
+      position:absolute;
+      width:50%;
+      left:50%; top:50%;
+      transform-origin:0% 0%;
+      font-size:1rem;
+      font-weight:500;
+      text-align:center;
+      color:#fff;
+    }
     #wheel-pointer {
       position:absolute;
-      top: -8px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 10px solid transparent;
-      border-right: 10px solid transparent;
-      border-bottom: 14px solid #e74c3c;
-      z-index: 30;
+      top:-8px; left:50%;
+      transform:translateX(-50%);
+      width:0; height:0;
+      border-left:10px solid transparent;
+      border-right:10px solid transparent;
+      border-bottom:14px solid #e74c3c;
+      z-index:30;
     }
 
-    /* Hinweistext über dem Rad */
-    #spin-hint {
-      margin-top: 14px;
-      font-size: 1.05rem;
-      color: #333;
-      font-weight:500;
-    }
-
-    /* Now-playing */
-    #now-playing { margin-top: 26px; display:none; }
-    #now-playing-text { font-size:2.2rem; font-weight:700; color:#222; margin-bottom:14px; }
-
-    #track-details { background:#f5f5f5; border-radius:12px; padding:18px; width:92%; max-width:520px; margin:0 auto; text-align:left; cursor:pointer; display:none; }
-    .details-weiter-btn { display:block; margin:18px auto 0; width:80%; max-width:360px; font-size:1.05rem; }
-
-    /* Pulse-Effekte für Disco-Licht */
+    /* Pulsation */
     .pulse-white {
-      animation: pulse-glow-white 1s infinite ease-in-out;
-      box-shadow: 0 0 40px 8px rgba(255,255,255,0.85), inset 0 0 30px rgba(255,255,255,0.6);
-      filter: brightness(1.2);
-    }
-    @keyframes pulse-glow-white {
-      0% { box-shadow: 0 0 8px 2px rgba(255,255,255,0.6); }
-      50% { box-shadow: 0 0 40px 10px rgba(255,255,255,0.95); }
-      100% { box-shadow: 0 0 8px 2px rgba(255,255,255,0.6); }
+      animation:pulseWhite 1s infinite ease-in-out;
+      box-shadow:0 0 40px 10px rgba(255,255,255,0.9);
     }
     .pulse-red {
-      animation: pulse-glow-red 0.8s infinite ease-in-out;
-      box-shadow: 0 0 40px 12px rgba(255,50,50,0.95), inset 0 0 30px rgba(255,50,50,0.5);
-      filter: brightness(1.05);
+      animation:pulseRed 0.8s infinite ease-in-out;
+      box-shadow:0 0 40px 12px rgba(255,50,50,0.9);
     }
-    @keyframes pulse-glow-red {
-      0% { box-shadow: 0 0 8px 2px rgba(255,50,50,0.45); }
-      50% { box-shadow: 0 0 60px 16px rgba(255,50,50,0.98); }
-      100% { box-shadow: 0 0 8px 2px rgba(255,50,50,0.45); }
+    @keyframes pulseWhite {
+      0%,100%{box-shadow:0 0 20px rgba(255,255,255,0.6);}
+      50%{box-shadow:0 0 50px rgba(255,255,255,1);}
+    }
+    @keyframes pulseRed {
+      0%,100%{box-shadow:0 0 20px rgba(255,60,60,0.5);}
+      50%{box-shadow:0 0 50px rgba(255,0,0,0.95);}
     }
 
-    #menu-bottom-btn { position:fixed; left:50%; transform:translateX(-50%); bottom:12px; z-index:20; padding:8px 22px; border-radius:25px; display:flex; align-items:center; justify-content:center; }
+    /* Now playing */
+    #now-playing { margin-top:40px; display:none; }
+    #now-playing-text { font-size:2.2rem; font-weight:700; color:#222; margin-bottom:18px; }
+    #track-details {
+      background:#f5f5f5;
+      border-radius:12px;
+      padding:18px;
+      width:90%;
+      max-width:500px;
+      margin:0 auto;
+      text-align:left;
+      display:none;
+      cursor:pointer;
+    }
+    .details-weiter-btn {
+      display:block;
+      margin:18px auto 0;
+      width:80%;
+      max-width:360px;
+      font-size:1.05rem;
+    }
 
-    #empty-warning { margin-top:20px; display:none; }
+    #menu-bottom-btn {
+      position:fixed;
+      left:50%;
+      transform:translateX(-50%);
+      bottom:12px;
+      z-index:20;
+      padding:8px 22px;
+      border-radius:25px;
+    }
   </style>
 </head>
 <body>
   <div class="container center-area">
     <div id="loading-text">Playlist wird geladen…</div>
-
     <button id="start-btn" class="btn-large green">Start</button>
 
-    <!-- Wheel container -->
-    <div id="wheel-container" aria-hidden="true">
-      <div id="wheel-pointer" aria-hidden="true"></div>
-      <div id="spin-hint">Spin the wheel</div>
-      <div id="wheel" role="button" aria-label="Rad drehen / Kategorie wählen"></div>
+    <div id="wheel-section">
+      <div id="spin-title">Spin the wheel</div>
+      <div id="wheel-container">
+        <div id="wheel-pointer"></div>
+        <div id="wheel"></div>
+      </div>
     </div>
 
     <div id="now-playing">
       <div id="now-playing-text">Song läuft …</div>
       <div id="track-details">Songinfos auflösen</div>
     </div>
-
-    <div id="empty-warning">
-      <p class="red-text">Keine gültigen Songs in der Playlist gefunden.</p>
-      <a href="bingo1.html" class="btn">Playlist bearbeiten</a>
-    </div>
   </div>
 
   <a id="menu-bottom-btn" class="btn orange" href="menu.html">Zum Menü</a>
 
-  <!-- Materialize JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-  <script src="bingo-start.js" defer></script>
+  <script src="bingo-start.js"></script>
 </body>
 </html>
