@@ -1,6 +1,3 @@
-// === Spotify + Playlist Funktionen bleiben unverändert ===
-// Nur neue Glücksrad-Logik und Pulsation integriert
-
 let cachedPlaylistTracks = [];
 let selectedTrackUri = null;
 let spotifyReady = null;
@@ -8,6 +5,8 @@ let wheelCtx, categories = [];
 let hasSpun = false;
 let hasPulsed = false;
 let rotation = 0;
+let pulseTimer1, pulseTimer2;
+const buzzer = document.getElementById("buzzer-sound");
 
 function extractPlaylistId(url){
   if(!url) return null;
@@ -19,15 +18,12 @@ function extractPlaylistId(url){
   return m?m[1]:null;
 }
 
-// Tracks laden (Spotify API)
 async function fetchPlaylistTracks(playlistId){
   const token=localStorage.getItem('access_token');
   if(!token) return [];
   const all=[]; const limit=50; let offset=0;
   try{
-    const meta=await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`,{
-      headers:{'Authorization':`Bearer ${token}`}
-    });
+    const meta=await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`,{headers:{'Authorization':`Bearer ${token}`}});
     const metaData=await meta.json(); const total=metaData.tracks?.total||0;
     while(offset<total){
       const resp=await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}`,{
@@ -42,8 +38,7 @@ async function fetchPlaylistTracks(playlistId){
   }catch(e){console.error(e);return [];}
 }
 
-// Spotify Web Playback SDK init
-spotifyReady = new Promise(resolve=>{
+spotifyReady=new Promise(resolve=>{
   window.onSpotifyWebPlaybackSDKReady=()=>{
     const token=localStorage.getItem('access_token');
     if(!token){resolve();return;}
@@ -52,7 +47,8 @@ spotifyReady = new Promise(resolve=>{
       getOAuthToken:cb=>cb(token)
     });
     player.addListener('ready',({device_id})=>{
-      window.deviceId=device_id; window.bingoPlayer=player;
+      window.deviceId=device_id;
+      window.bingoPlayer=player;
       resolve();
     });
     player.connect().catch(()=>resolve());
@@ -63,7 +59,6 @@ async function playTrack(uri){
   const token=localStorage.getItem('access_token');
   if(!token) return false;
   await spotifyReady;
-  let wait=0; while(!window.deviceId && wait<5000){await new Promise(r=>setTimeout(r,200)); wait+=200;}
   try{
     const dev=window.deviceId?`?device_id=${window.deviceId}`:'';
     const res=await fetch(`https://api.spotify.com/v1/me/player/play${dev}`,{
@@ -97,7 +92,7 @@ function updateTrackDetailsElement(track){
   details.onclick=()=>{
     if(!expanded){
       details.innerHTML=`
-        <div>
+        <div style="text-align:left;">
           <p><strong>Titel:</strong> ${track.name}</p>
           <p><strong>Interpret:</strong> ${track.artists.map(a=>a.name).join(', ')}</p>
           <p><strong>Album:</strong> ${track.album.name||''}</p>
@@ -109,9 +104,13 @@ function updateTrackDetailsElement(track){
       weiter.textContent='Nächstes Lied';
       weiter.type='button';
       details.appendChild(weiter);
+
       weiter.addEventListener('click',async(ev)=>{
         ev.stopPropagation();
-        await stopPlayback(); // Song stoppen beim Nächstes Lied
+        clearTimeout(pulseTimer1);
+        clearTimeout(pulseTimer2);
+        document.getElementById('wheel-container').classList.remove('pulse-yellow','pulse-red');
+        await stopPlayback();
         hasSpun=false; hasPulsed=false;
         document.getElementById('now-playing').style.display='none';
         document.getElementById('selected-category').textContent='';
@@ -124,13 +123,13 @@ function updateTrackDetailsElement(track){
   };
 }
 
-// --- Glücksrad zeichnen ---
+/* ==== Glücksrad ==== */
 function drawWheel(){
   const canvas=document.getElementById('wheel-canvas');
   const ctx=canvas.getContext('2d');
   const count=categories.length;
   const arc=(2*Math.PI)/count;
-  const colors=['#f44336','#e91e63','#9c27b0','#3f51b5','#2196f3','#009688','#4caf50','#ff9800','#ffc107','#8bc34a','#03a9f4','#00bcd4'];
+  const colors=['#ff8a80','#f48fb1','#ce93d8','#9fa8da','#81d4fa','#80cbc4','#a5d6a7','#ffcc80','#fff59d','#c5e1a5','#b39ddb','#ffab91'];
   ctx.clearRect(0,0,400,400);
   for(let i=0;i<count;i++){
     ctx.beginPath();
@@ -143,14 +142,13 @@ function drawWheel(){
     ctx.translate(200,200);
     ctx.rotate(i*arc+arc/2);
     ctx.textAlign='right';
-    ctx.fillStyle='#fff';
+    ctx.fillStyle='#222';
     ctx.font='bold 18px Roboto';
     ctx.fillText(categories[i],180,10);
     ctx.restore();
   }
 }
 
-// --- Glücksrad drehen ---
 function spinWheel(){
   const canvas=document.getElementById('wheel-canvas');
   const count=categories.length;
@@ -162,16 +160,14 @@ function spinWheel(){
   return categories[picked];
 }
 
-// --- Pulsation + Buzzer ---
 function pulseWheel(){
   return new Promise(resolve=>{
     const wheel=document.getElementById('wheel-container');
-    const buzzer=document.getElementById('buzzer-sound');
     wheel.classList.add('pulse-yellow');
-    setTimeout(()=>{
+    pulseTimer1=setTimeout(()=>{
       wheel.classList.remove('pulse-yellow');
       wheel.classList.add('pulse-red');
-      setTimeout(()=>{
+      pulseTimer2=setTimeout(()=>{
         wheel.classList.remove('pulse-red');
         buzzer.currentTime=0; buzzer.play().catch(()=>{});
         resolve();
@@ -180,7 +176,7 @@ function pulseWheel(){
   });
 }
 
-// === Hauptlogik ===
+/* ==== Hauptlogik ==== */
 document.addEventListener('DOMContentLoaded',async()=>{
   const token=localStorage.getItem('access_token');
   if(!token){window.location.href='index.html';return;}
@@ -193,7 +189,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
 
   const playlistUrl=localStorage.getItem('bingoPlaylistUrl')||localStorage.getItem('mobilePlaylistUrl')||'';
   const playlistId=extractPlaylistId(playlistUrl);
-  if(!playlistId){return;}
+  if(!playlistId)return;
 
   loading.style.display='block';
   cachedPlaylistTracks=await fetchPlaylistTracks(playlistId);
@@ -241,7 +237,6 @@ document.addEventListener('DOMContentLoaded',async()=>{
       });
     });
   }else{
-    // Standard-Bingo ohne Discokugel
     startBtn.addEventListener('click',async()=>{
       startBtn.style.display='none';
       nowPlaying.style.display='block';
