@@ -155,37 +155,51 @@ function drawWheel(){
   }
 }
 
-// Drehanimation mit realer Kategorie-Bestimmung
-function spinWheel(){
-  return new Promise(resolve=>{
-    const canvas=document.getElementById('wheel-canvas');
-    const count=categories.length;
-    const arc=360/count;
+// Drehanimation mit realer Kategorie-Bestimmung (korrekt für Pfeil nach unten)
+function spinWheel() {
+  return new Promise(resolve => {
+    const canvas = document.getElementById('wheel-canvas');
+    const count = categories.length;
+    const arc = 360 / count;
 
-    const spin=3600 + Math.floor(Math.random()*360);
-    const startRotation=rotation;
-    const targetRotation=startRotation+spin;
-    const startTime=performance.now();
-    const duration=5000;
+    // Ziel: zufällige Kategorie -> daraus exakte Drehung berechnen
+    const chosenIndex = Math.floor(Math.random() * count);
+    const targetAngle = (360 - (chosenIndex * arc) - arc / 2 + 270) % 360;
 
-    function animate(now){
-      const elapsed=now-startTime;
-      const t=Math.min(elapsed/duration,1);
-      const ease=1 - Math.pow(1-t,3);
-      const current=startRotation + (spin*ease);
-      canvas.style.transform=`rotate(${current}deg)`;
-      if(t<1) requestAnimationFrame(animate);
-      else{
-        rotation=targetRotation;
-        const normalized = ((rotation % 360) + 360) % 360;
-        const index = Math.floor((count - (normalized / arc)) % count);
+    // Drehung: mehrere volle Runden + exakter Zielwinkel
+    const spins = 5; // volle Umdrehungen
+    const finalRotation = rotation + spins * 360 + targetAngle;
+
+    const startRotation = rotation;
+    const startTime = performance.now();
+    const duration = 5000;
+
+    function animate(now) {
+      const elapsed = now - startTime;
+      const t = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - t, 3); // ease-out
+      const current = startRotation + (finalRotation - startRotation) * ease;
+      canvas.style.transform = `rotate(${current}deg)`;
+
+      if (t < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        rotation = finalRotation % 360;
+
+        // Bestimme den tatsächlichen Index unter dem Pfeil (unten bei 270°)
+        const normalized = (rotation + 360) % 360;
+        const angleFromBottom = (normalized + 90) % 360; // Pfeil unten = 270°
+        const index = Math.floor((count - angleFromBottom / arc)) % count;
+
         const category = categories[index];
         resolve(category);
       }
     }
+
     requestAnimationFrame(animate);
   });
 }
+
 
 // === Pulsieren + Buzzer ===
 function pulseWheel(){
