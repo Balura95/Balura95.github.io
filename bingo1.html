@@ -1,80 +1,33 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bingo — Playlist wählen</title>
-
-  <!-- Materialize CSS -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"/>
-
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bingo – Playlist wählen</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
   <style>
-    body { font-family: Roboto, sans-serif; background:#fafafa; margin:0; padding:20px 16px 80px; }
-    .card { max-width:720px; margin: 20px auto; }
-    .button-group { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:10px; }
-    #categories-wrapper { display:none; } /* sichtbar bei Checkbox */
-    /* Zum Menü unten mittig (kleiner, mittig zentriert) */
+    body { text-align: center; padding: 2rem; background-color: #fafafa; }
     #menu-bottom-btn {
       position: fixed;
+      bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      bottom: 12px;
-      z-index: 999;
-      padding: 8px 20px;
-      border-radius: 22px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
     }
   </style>
 </head>
 <body>
-  <div class="card z-depth-3">
-    <div class="card-content">
-      <h5>Playlist auswählen</h5>
 
-      <div class="input-field">
-        <input id="playlist-url" type="text" value="">
-        <label for="playlist-url">Selbsterstellte, öffentliche Playlist-URL eintragen</label>
-      </div>
+  <h4>Playlist auswählen</h4>
+  <p>Füge deine Spotify-Playlist hinzu, um das Bingo-Spiel zu starten.</p>
 
-      <p>
-        <label>
-          <input type="checkbox" id="discokugel-checkbox" />
-          <span>Discokugel aktivieren</span>
-        </label>
-      </p>
-
-      <!-- Kategorien-Wrapper: enthält Felder + Buttons (Buttons bewegen sich mit) -->
-      <div id="categories-wrapper" style="margin-top:12px;">
-        <h6>Mit welchen Kategorien möchtest du spielen? (optional)</h6>
-
-        <div id="categories-container">
-          <div class="input-field">
-            <input class="category-input" type="text">
-            <label>Kategorie eintragen</label>
-          </div>
-        </div>
-
-        <div class="button-group">
-          <button id="add-category" class="btn blue">+ Kategorie</button>
-          <button id="remove-category" class="btn red">- Kategorie</button>
-        </div>
-      </div>
-
-      <div style="text-align:center; margin-top:18px;">
-        <button id="next-button" class="btn-large green">Weiter</button>
-      </div>
-    </div>
-
-    <!-- card-action bleibt (optional) -->
+  <div class="input-field" style="max-width: 500px; margin: 0 auto;">
+    <input id="playlist-url" type="text" placeholder="Spotify-Playlist-Link hier einfügen">
   </div>
 
-  <!-- "Zurück zum Menü" unten mittig -->
-  <a id="menu-bottom-btn" class="btn orange" href="menu.html">Zurück zum Menü</a>
+  <button id="weiter-btn" class="btn green">Weiter</button>
 
-  <!-- Materialize JS -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-  <script src="bingo1.js" defer></script>
+  <a id="menu-bottom-btn" href="menu.html" class="btn orange">Zum Menü</a>
+
+  <script src="bingo1.js"></script>
 </body>
 </html>
