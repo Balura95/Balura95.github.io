@@ -9,11 +9,23 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"/>
 
   <style>
-    body { font-family: Roboto, sans-serif; background:#fafafa; margin:0; padding:20px; }
+    body { font-family: Roboto, sans-serif; background:#fafafa; margin:0; padding:20px 16px 80px; }
     .card { max-width:720px; margin: 20px auto; }
     .button-group { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:10px; }
-    /* damit Buttons nicht über anderen Elementen schweben */
-    #categories-wrapper { display:none; }
+    #categories-wrapper { display:none; } /* sichtbar bei Checkbox */
+    /* Zum Menü unten mittig (kleiner, mittig zentriert) */
+    #menu-bottom-btn {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 12px;
+      z-index: 999;
+      padding: 8px 20px;
+      border-radius: 22px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
   </style>
 </head>
 <body>
@@ -33,7 +45,7 @@
         </label>
       </p>
 
-      <!-- Kategorien-Wrapper (wird per Checkbox sichtbar) -->
+      <!-- Kategorien-Wrapper: enthält Felder + Buttons (Buttons bewegen sich mit) -->
       <div id="categories-wrapper" style="margin-top:12px;">
         <h6>Mit welchen Kategorien möchtest du spielen? (optional)</h6>
 
@@ -55,12 +67,13 @@
       </div>
     </div>
 
-    <div class="card-action" style="justify-content:center;">
-      <a href="menu.html" class="btn orange">Zurück zum Menü</a>
-    </div>
+    <!-- card-action bleibt (optional) -->
   </div>
 
-  <!-- Materialize JS (für Toasts & label float) -->
+  <!-- "Zurück zum Menü" unten mittig -->
+  <a id="menu-bottom-btn" class="btn orange" href="menu.html">Zurück zum Menü</a>
+
+  <!-- Materialize JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
   <script src="bingo1.js" defer></script>
 </body>

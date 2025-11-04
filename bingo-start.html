@@ -8,22 +8,55 @@
   <!-- Materialize CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"/>
 
-  <!-- Spotify SDK (wenn du die Web Playback SDK nutzen willst) -->
+  <!-- Spotify SDK -->
   <script src="https://sdk.scdn.co/spotify-player.js"></script>
 
   <style>
-    body { font-family: Roboto, sans-serif; background:#fafafa; margin:0; min-height:100vh; padding-bottom:100px; }
-    .center-area { text-align:center; margin-top:12vh; }
-    #loading-text { margin-top: 24px; font-size:1.1rem; color:#555; }
-    /* großer runder Start-Button */
+    body { font-family: Roboto, sans-serif; background:#fafafa; margin:0; min-height:100vh; padding-bottom:110px; }
+    .center-area { text-align:center; margin-top:10vh; }
+
+    /* Lade-Text */
+    #loading-text { margin-top: 18px; font-size:1.1rem; color:#555; }
+
+    /* Großer runder Start-Button */
     #start-btn { display:none; width:130px; height:130px; border-radius:50%; font-size:18px; line-height:130px; padding:0; box-shadow: 0 6px 14px rgba(0,0,0,0.16); }
-    #now-playing { margin-top:36px; display:none; }
-    #now-playing-text { font-size:2.0rem; font-weight:700; color:#222; margin-bottom:18px; }
-    #track-details { background:#f5f5f5; border-radius:12px; padding:18px; width:90%; max-width:460px; margin:0 auto; text-align:left; cursor:pointer; }
-    #track-details:hover { background:#ececec; }
+
+    /* Wheel (Discokugel) */
+    #wheel-container { margin: 22px auto 0; width: 260px; height: 260px; position: relative; display: none; }
+    #wheel { width:100%; height:100%; border-radius:50%; position:relative; transform: rotate(0deg); transition: transform 3s cubic-bezier(.25,.9,.1,1); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+    /* Labels auf dem Rad */
+    .wheel-label {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform-origin: 0 0;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    /* Pointer (oben) */
+    #wheel-pointer {
+      position:absolute;
+      top: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-bottom: 14px solid #e74c3c;
+      z-index: 20;
+    }
+
+    /* Now-playing */
+    #now-playing { margin-top: 26px; display:none; }
+    #now-playing-text { font-size:2.2rem; font-weight:700; color:#222; margin-bottom:14px; }
+
+    #track-details { background:#f5f5f5; border-radius:12px; padding:18px; width:92%; max-width:520px; margin:0 auto; text-align:left; cursor:pointer; }
     .details-weiter-btn { display:block; margin:18px auto 0; width:80%; max-width:360px; font-size:1.05rem; }
-    /* Zum Menü Button bottom center, text zentriert vert & horiz */
-    #menu-bottom-btn { position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:20; padding:8px 22px; border-radius:25px; display:flex; align-items:center; justify-content:center; }
+
+    #menu-bottom-btn { position:fixed; left:50%; transform:translateX(-50%); bottom:12px; z-index:20; padding:8px 22px; border-radius:25px; display:flex; align-items:center; justify-content:center; }
+
     #empty-warning { margin-top:20px; display:none; }
   </style>
 </head>
@@ -33,12 +66,15 @@
 
     <button id="start-btn" class="btn-large green">Start</button>
 
+    <!-- Wheel container (erscheint nur wenn Kategorien vorhanden) -->
+    <div id="wheel-container" aria-hidden="true">
+      <div id="wheel-pointer" aria-hidden="true"></div>
+      <div id="wheel" role="button" aria-label="Rad drehen / Kategorie wählen"></div>
+    </div>
+
     <div id="now-playing">
       <div id="now-playing-text">Song läuft …</div>
-
-      <div id="track-details">
-        Songinfos auflösen
-      </div>
+      <div id="track-details">Songinfos auflösen</div>
     </div>
 
     <div id="empty-warning">

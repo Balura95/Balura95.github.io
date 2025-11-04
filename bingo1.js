@@ -8,11 +8,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const removeBtn = document.getElementById('remove-category');
   const nextBtn = document.getElementById('next-button');
 
-  // Vorbefüllen: falls bereits gespeichert (bingoPlaylistUrl oder mobilePlaylistUrl)
+  // Vorbefüllen: falls schon gespeichert (bingoPlaylistUrl oder mobilePlaylistUrl)
   const existing = localStorage.getItem('bingoPlaylistUrl') || localStorage.getItem('mobilePlaylistUrl') || '';
   if (existing && input) {
     input.value = existing;
     if (window.M && typeof M.updateTextFields === 'function') M.updateTextFields();
+  }
+
+  // Falls Kategorien vorher gespeichert wurden, checkbox vorbefüllen
+  const existingCatsRaw = localStorage.getItem('bingoCategories');
+  if (existingCatsRaw) {
+    try {
+      const cats = JSON.parse(existingCatsRaw);
+      if (Array.isArray(cats) && cats.length > 0) {
+        // zeige wrapper & vorbefülle Felder
+        checkbox.checked = true;
+        categoriesWrapper.style.display = 'block';
+        // clear default single input and re-populate
+        categoriesContainer.innerHTML = '';
+        cats.forEach((c, idx) => {
+          const div = document.createElement('div');
+          div.className = 'input-field';
+          div.innerHTML = `<input class="category-input" type="text" value="${escapeHtmlAttr(c)}"><label class="${c ? 'active' : ''}">Kategorie ${idx+1}</label>`;
+          categoriesContainer.appendChild(div);
+        });
+      }
+    } catch (e) { /* ignore parse errors */ }
   }
 
   // Checkbox toggelt Kategorien-Wrapper
@@ -29,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
       div.className = 'input-field';
       div.innerHTML = '<input class="category-input" type="text"><label>Weitere Kategorie eintragen</label>';
       categoriesContainer.appendChild(div);
-      // Materialize: update labels (falls vorhanden)
       if (window.M && typeof M.updateTextFields === 'function') M.updateTextFields();
       div.querySelector('.category-input').focus();
     });
@@ -45,16 +65,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Weiter-Button: speichert Playlist + Kategorien (nur UI; Bingo-Start nutzt nur bingoPlaylistUrl)
+  // Weiter-Button: speichert Playlist + Kategorien (Discokugel -> bingoCategories)
   nextBtn.addEventListener('click', () => {
     const playlistUrl = input.value.trim();
     if (!playlistUrl) {
       if (window.M) M.toast({ html: "Bitte Playlist URL eingeben", classes: "rounded", displayLength: 2000 });
       return;
     }
+    // Speichere unter bingoPlaylistUrl (bingo-start liest diesen vorrangig)
     localStorage.setItem('bingoPlaylistUrl', playlistUrl);
 
-    // Kategorien optional speichern (nur UI; werden aktuell nicht im Player ausgewertet)
+    // Kategorien optional speichern (nur wenn Discokugel aktiviert)
     if (checkbox && checkbox.checked) {
       const catInputs = categoriesContainer.querySelectorAll('.category-input');
       const cats = [];
@@ -67,7 +88,11 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('bingoCategories', JSON.stringify([]));
     }
 
-    // Weiter zu bingo-start.html
     window.location.href = 'bingo-start.html';
   });
+
+  // Utility: einfache Escaping für value attribute
+  function escapeHtmlAttr(s) {
+    return String(s).replace(/"/g, '&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
 });
