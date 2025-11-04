@@ -3,58 +3,54 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Bingo – Start</title>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet"/>
+  <title>Bingo — Start</title>
+
+  <!-- Materialize CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"/>
+
+  <!-- Spotify SDK (wenn du die Web Playback SDK nutzen willst) -->
+  <script src="https://sdk.scdn.co/spotify-player.js"></script>
 
   <style>
-    body { font-family: Roboto, sans-serif; text-align: center; padding-top: 60px; background: #fafafa; }
-    #loading-text { font-size: 18px; color: #555; }
-    #start-btn {
-      display: none;
-      margin-top: 30px;
-      width: 140px;
-      height: 140px;
-      border-radius: 50%;
-      font-size: 22px;
-      line-height: 140px;
-      background-color: #2e7d32;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    #now-playing { display: none; margin-top: 30px; }
-    #now-playing h4 { font-size: 28px; margin-bottom: 10px; }
-    #track-details {
-      display: none;
-      background: #f0f0f0;
-      border-radius: 12px;
-      padding: 20px;
-      max-width: 500px;
-      margin: 20px auto;
-      text-align: left;
-      cursor: pointer;
-    }
-    #menu-bottom-btn {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-    }
+    body { font-family: Roboto, sans-serif; background:#fafafa; margin:0; min-height:100vh; padding-bottom:100px; }
+    .center-area { text-align:center; margin-top:12vh; }
+    #loading-text { margin-top: 24px; font-size:1.1rem; color:#555; }
+    /* großer runder Start-Button */
+    #start-btn { display:none; width:130px; height:130px; border-radius:50%; font-size:18px; line-height:130px; padding:0; box-shadow: 0 6px 14px rgba(0,0,0,0.16); }
+    #now-playing { margin-top:36px; display:none; }
+    #now-playing-text { font-size:2.0rem; font-weight:700; color:#222; margin-bottom:18px; }
+    #track-details { background:#f5f5f5; border-radius:12px; padding:18px; width:90%; max-width:460px; margin:0 auto; text-align:left; cursor:pointer; }
+    #track-details:hover { background:#ececec; }
+    .details-weiter-btn { display:block; margin:18px auto 0; width:80%; max-width:360px; font-size:1.05rem; }
+    /* Zum Menü Button bottom center, text zentriert vert & horiz */
+    #menu-bottom-btn { position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:20; padding:8px 22px; border-radius:25px; display:flex; align-items:center; justify-content:center; }
+    #empty-warning { margin-top:20px; display:none; }
   </style>
 </head>
 <body>
+  <div class="container center-area">
+    <div id="loading-text">Playlist wird geladen…</div>
 
-  <div id="loading-text">Playlist wird geladen...</div>
-  <button id="start-btn">Start</button>
+    <button id="start-btn" class="btn-large green">Start</button>
 
-  <div id="now-playing">
-    <h4>Song läuft...</h4>
-    <div id="track-details">Songinfos auflösen</div>
+    <div id="now-playing">
+      <div id="now-playing-text">Song läuft …</div>
+
+      <div id="track-details">
+        Songinfos auflösen
+      </div>
+    </div>
+
+    <div id="empty-warning">
+      <p class="red-text">Keine gültigen Songs in der Playlist gefunden.</p>
+      <a href="bingo1.html" class="btn">Playlist bearbeiten</a>
+    </div>
   </div>
 
-  <a id="menu-bottom-btn" href="menu.html" class="btn orange">Zum Menü</a>
+  <a id="menu-bottom-btn" class="btn orange" href="menu.html">Zum Menü</a>
 
+  <!-- Materialize JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-  <script src="bingo-start.js"></script>
+  <script src="bingo-start.js" defer></script>
 </body>
 </html>
