@@ -9,64 +9,106 @@
 <script src="https://sdk.scdn.co/spotify-player.js"></script>
 
 <style>
-body { font-family: Roboto, sans-serif; background:#fafafa; margin:0; min-height:100vh; padding-bottom:80px; }
-.center-area { text-align:center; margin-top:8vh; }
+  body { font-family: Roboto, sans-serif; background:#fafafa; margin:0; min-height:100vh; padding-bottom:100px; }
+  .center-area { text-align:center; margin-top:6vh; }
 
-#loading-text { margin-top:24px; font-size:1.1rem; color:#555; }
+  #loading-text { margin-top:12px; font-size:1.05rem; color:#555; }
 
-#start-btn { display:inline-block; width:130px; height:130px; border-radius:50%; font-size:18px; line-height:130px; padding:0; box-shadow:0 6px 14px rgba(0,0,0,0.16); }
+  /* großer runder Start-Button */
+  #start-btn { display:inline-block; width:130px; height:130px; border-radius:50%; font-size:18px; line-height:130px; padding:0; box-shadow:0 6px 14px rgba(0,0,0,0.16); }
 
-#wheel-container { display:none; margin:20px auto; width:400px; height:400px; position:relative; }
-#wheel-canvas { width:100%; height:100%; transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1); }
+  /* Rad-Container (rund, kein eckiger weißer Kasten) */
+  #wheel-container {
+    display:none;
+    margin: 20px auto;
+    width:400px;
+    height:400px;
+    position:relative;
+    border-radius:50%;
+    overflow:hidden;
+    background: radial-gradient( circle at 50% 40%, rgba(255,255,255,0.05), rgba(0,0,0,0.02) );
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  }
 
-#wheel-pointer { position:absolute; top:-10px; left:50%; transform:translateX(-50%); width:0; height:0;
-  border-left:15px solid transparent;
-  border-right:15px solid transparent;
-  border-bottom:30px solid red;
-  z-index:10;
-}
+  /* Canvas transparent, rund */
+  #wheel-canvas {
+    width:100%;
+    height:100%;
+    display:block;
+    background: transparent;
+    border-radius:50%;
+    transform-origin: 50% 50%;
+    transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
 
-#now-playing { margin-top:36px; display:none; }
-#now-playing-text { font-size:2rem; font-weight:700; color:#222; margin-bottom:18px; }
-#track-details { background:#f5f5f5; border-radius:12px; padding:18px; width:90%; max-width:460px; margin:0 auto; text-align:left; cursor:pointer; }
-#track-details:hover { background:#ececec; }
-.details-weiter-btn { display:block; margin:18px auto 0; width:80%; max-width:360px; font-size:1.05rem; }
+  /* Pfeil oben (umgedreht) */
+  #wheel-pointer {
+    position:absolute;
+    top:-14px;
+    left:50%;
+    transform:translateX(-50%) rotate(180deg); /* <-- hier umgedreht */
+    width:0; height:0;
+    border-left:16px solid transparent;
+    border-right:16px solid transparent;
+    border-top:28px solid #e53935; /* wir verwenden border-top damit Spitze nach oben zeigt, durch rotate(180deg) invertiert */
+    z-index:20;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
+  }
 
-@keyframes pulse-yellow {0%,100%{box-shadow:0 0 0 0 rgba(255,255,0,0.7);}50%{box-shadow:0 0 20px 20px rgba(255,255,0,0.7);}}
-@keyframes pulse-red {0%,100%{box-shadow:0 0 0 0 rgba(255,0,0,0.7);}50%{box-shadow:0 0 20px 20px rgba(255,0,0,0.7);}}
-.pulse-yellow { animation: pulse-yellow 1s infinite; }
-.pulse-red { animation: pulse-red 1s infinite; }
+  #selected-category {
+    display:none;
+    margin-top:12px;
+    font-weight:700;
+    font-size:1.25rem;
+    color:#333;
+  }
 
-#empty-warning { margin-top:20px; display:none; }
+  #now-playing { margin-top:20px; display:none; }
+  #now-playing-text { font-size:1.8rem; font-weight:700; color:#222; margin-bottom:12px; }
+  #track-details { background:#f5f5f5; border-radius:12px; padding:16px; width:92%; max-width:520px; margin:0 auto; text-align:left; cursor:pointer; }
+  #track-details:hover { background:#ececec; }
+  .details-weiter-btn { display:block; margin:16px auto 0; width:80%; max-width:360px; font-size:1.02rem; }
 
-#menu-bottom-btn { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); z-index:20; padding:8px 22px; border-radius:25px; }
+  @keyframes pulse-yellow {0%,100%{box-shadow:0 0 0 0 rgba(255,255,0,0.85);}50%{box-shadow:0 0 26px 26px rgba(255,255,0,0.65);} }
+  @keyframes pulse-red {0%,100%{box-shadow:0 0 0 0 rgba(255,0,0,0.85);}50%{box-shadow:0 0 26px 26px rgba(255,0,0,0.65);} }
+  .pulse-yellow { animation: pulse-yellow 1s infinite; }
+  .pulse-red { animation: pulse-red 1s infinite; }
+
+  #empty-warning { margin-top:20px; display:none; }
+
+  /* Zum Menü Button unten fixiert & mittig */
+  #menu-bottom-btn { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); z-index:30; padding:8px 22px; border-radius:25px; }
 </style>
 </head>
 <body>
-<div class="container center-area">
-  <div id="loading-text">Playlist wird geladen…</div>
+  <div class="container center-area">
+    <div id="loading-text">Playlist wird geladen…</div>
 
-  <button id="start-btn" class="btn-large green">Start</button>
+    <button id="start-btn" class="btn-large green">Start</button>
 
-  <div id="wheel-container">
-    <div id="wheel-pointer"></div>
-    <canvas id="wheel-canvas" width="400" height="400"></canvas>
+    <!-- Rad-Container (erst nach Klick sichtbar) -->
+    <div id="wheel-container" aria-hidden="true">
+      <div id="wheel-pointer" aria-hidden="true"></div>
+      <canvas id="wheel-canvas" width="400" height="400" role="img" aria-label="Glücksrad"></canvas>
+    </div>
+
+    <div id="selected-category" aria-live="polite"></div>
+
+    <div id="now-playing" aria-live="polite">
+      <div id="now-playing-text">Song läuft …</div>
+      <div id="track-details">Songinfos auflösen</div>
+    </div>
+
+    <div id="empty-warning">
+      <p class="red-text">Keine gültigen Songs in der Playlist gefunden.</p>
+      <a href="bingo1.html" class="btn">Playlist bearbeiten</a>
+    </div>
   </div>
 
-  <div id="now-playing">
-    <div id="now-playing-text">Song läuft …</div>
-    <div id="track-details">Songinfos auflösen</div>
-  </div>
+  <a id="menu-bottom-btn" class="btn orange" href="menu.html">Zum Menü</a>
 
-  <div id="empty-warning">
-    <p class="red-text">Keine gültigen Songs in der Playlist gefunden.</p>
-    <a href="bingo1.html" class="btn">Playlist bearbeiten</a>
-  </div>
-</div>
-
-<a id="menu-bottom-btn" class="btn orange" href="menu.html">Zum Menü</a>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-<script src="bingo-start.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script src="bingo-start.js" defer></script>
 </body>
 </html>
