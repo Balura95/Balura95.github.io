@@ -1,112 +1,106 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Bingo — Start</title>
-
-  <!-- Materialize CSS für Toasts -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"/>
-
-  <!-- Spotify Web Playback SDK (optional) -->
-  <script src="https://sdk.scdn.co/spotify-player.js"></script>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bingo Start</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="bingo.css">
   <style>
-    :root { --wheel-size: 340px; }
-    body { margin:0; font-family: Roboto, sans-serif; background:#fafafa; min-height:100vh; padding-bottom:120px; }
-    .center-area { text-align:center; margin-top:8vh; }
-
-    #loading-text { font-size:1.05rem; color:#555; margin-top:12px; }
-
-    /* großer runder Start-Button */
-    #start-btn {
-      display:none;
-      width:130px; height:130px;
-      border-radius:50%;
-      font-size:18px;
-      line-height:130px;
-      padding:0;
-      box-shadow:0 6px 14px rgba(0,0,0,0.16);
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #111;
+      color: white;
+      text-align: center;
     }
 
-    /* Wheel Section */
-    #wheel-section { display:none; margin-top:26px; }
-    #spin-title { font-size:1.6rem; font-weight:700; color:#222; margin-bottom:14px; }
-    #wheel-container { margin:0 auto; width:var(--wheel-size); height:var(--wheel-size); position:relative; }
-    #wheel {
-      width:100%; height:100%; border-radius:50%;
-      overflow:hidden; position:relative;
-      transition: transform 3s cubic-bezier(.25,.9,.1,1);
-      transform: rotate(0deg);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-    }
-    .wheel-label {
-      position:absolute;
-      left:50%; top:50%;
-      width:45%;
-      text-align:center;
-      font-weight:600;
-      color:#fff;
-      pointer-events:none;
-      font-size:0.95rem;
-    }
-    #wheel-pointer {
-      position:absolute; top:-10px; left:50%; transform:translateX(-50%);
-      width:0; height:0;
-      border-left:12px solid transparent; border-right:12px solid transparent;
-      border-bottom:16px solid #e74c3c; z-index:30;
+    #loading {
+      font-size: 1.5em;
     }
 
-    /* Pulsation: gelb -> rot */
-    .pulse-yellow { animation: pulseYellow 1s infinite ease-in-out; box-shadow: 0 0 48px 14px rgba(255,230,130,0.95); filter:brightness(1.1); }
-    .pulse-red    { animation: pulseRed 0.8s infinite ease-in-out;  box-shadow: 0 0 60px 18px rgba(255,60,60,0.95); }
-    @keyframes pulseYellow { 0%,100%{box-shadow:0 0 12px rgba(255,230,130,0.6);} 50%{box-shadow:0 0 48px rgba(255,230,130,1);} }
-    @keyframes pulseRed    { 0%,100%{box-shadow:0 0 12px rgba(255,60,60,0.4);} 50%{box-shadow:0 0 60px rgba(255,0,0,0.95);} }
-
-    /* Now playing + Trackdetails */
-    #now-playing { margin-top:26px; display:none; }
-    #now-playing-text { font-size:2.1rem; font-weight:700; color:#222; margin-bottom:12px; }
-    #track-details {
-      background:#f5f5f5; border-radius:12px; padding:18px; width:90%; max-width:560px; margin:0 auto;
-      text-align:left; display:none; cursor:pointer;
+    #start-button {
+      display: none;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      font-size: 1.2em;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      cursor: pointer;
     }
-    .details-weiter-btn { display:block; margin:18px auto 0; width:80%; max-width:360px; font-size:1.02rem; }
 
-    /* Zum Menü unten mittig */
-    #menu-bottom-btn { position:fixed; left:50%; transform:translateX(-50%); bottom:12px; z-index:20; padding:8px 22px; border-radius:25px; display:flex; align-items:center; justify-content:center; }
+    canvas {
+      margin-top: 20px;
+    }
 
-    #empty-warning { margin-top:20px; display:none; }
+    #spin-text {
+      font-size: 1.8em;
+      margin-bottom: 10px;
+    }
+
+    .pulse-yellow {
+      animation: pulseYellow 1s infinite alternate;
+    }
+
+    .pulse-red {
+      animation: pulseRed 0.6s infinite alternate;
+    }
+
+    @keyframes pulseYellow {
+      0% { filter: drop-shadow(0 0 10px yellow); }
+      100% { filter: drop-shadow(0 0 30px yellow); }
+    }
+
+    @keyframes pulseRed {
+      0% { filter: drop-shadow(0 0 10px red); }
+      100% { filter: drop-shadow(0 0 40px red); }
+    }
+
+    #song-info {
+      display: none;
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 20px;
+      width: 80%;
+      max-width: 400px;
+    }
+
+    #menu-button {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: orange;
+      color: white;
+      font-size: 1.2em;
+      border-radius: 8px;
+      padding: 10px 20px;
+    }
   </style>
 </head>
 <body>
-  <div class="container center-area">
-    <div id="loading-text">Playlist wird geladen…</div>
+  <div id="loading">Playlist wird geladen...</div>
+  <button id="start-button">Start</button>
 
-    <button id="start-btn" class="btn-large green">Start</button>
+  <h4 id="spin-text" style="display:none;">Spin the Wheel</h4>
+  <canvas id="wheel" width="400" height="400" style="display:none;"></canvas>
 
-    <div id="wheel-section" aria-hidden="true">
-      <div id="spin-title">Spin the wheel</div>
-      <div id="wheel-container">
-        <div id="wheel-pointer" aria-hidden="true"></div>
-        <div id="wheel" role="button" aria-label="Rad drehen"></div>
-      </div>
-    </div>
-
-    <div id="now-playing">
-      <div id="now-playing-text">Song läuft …</div>
-      <div id="track-details">Songinfos auflösen</div>
-    </div>
-
-    <div id="empty-warning">
-      <p class="red-text">Keine gültigen Songs in der Playlist gefunden.</p>
-      <a href="bingo1.html" class="btn">Playlist bearbeiten</a>
-    </div>
+  <div id="song-info">
+    <h5>Song läuft</h5>
+    <p id="song-name"></p>
+    <button id="next-song" class="btn green">Weiter</button>
   </div>
 
-  <a id="menu-bottom-btn" class="btn orange" href="menu.html">Zum Menü</a>
+  <a href="menu.html" id="menu-button" class="btn orange">Zurück zum Menü</a>
 
-  <!-- Materialize -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-  <script src="bingo-start.js" defer></script>
+  <script src="bingo-start.js"></script>
 </body>
 </html>
