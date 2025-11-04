@@ -208,19 +208,22 @@ function spinWheel(){
 }
 
 /* Pulsation: gelb 15s -> rot 5s */
+/* Pulsation: gelb 15s -> rot 5s */
 function pulseWheel(){
   return new Promise(resolve => {
-    wheelCanvas.classList.add('pulse-yellow');
+    const wheelContainer = document.getElementById('wheel-container');
+    wheelContainer.classList.add('pulse-yellow');
     setTimeout(() => {
-      wheelCanvas.classList.remove('pulse-yellow');
-      wheelCanvas.classList.add('pulse-red');
+      wheelContainer.classList.remove('pulse-yellow');
+      wheelContainer.classList.add('pulse-red');
       setTimeout(() => {
-        wheelCanvas.classList.remove('pulse-red');
+        wheelContainer.classList.remove('pulse-red');
         resolve();
       }, 5000);
     }, 15000);
   });
 }
+
 
 /* Start song AFTER wheel finished spinning and show selected category text */
 async function startSongAfterSpin(){
