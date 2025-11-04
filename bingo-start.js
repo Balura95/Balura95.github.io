@@ -1,7 +1,9 @@
-// bingo-start.js
-// Vollständige, robuste Version mit Spotify-Playlist-Laden, Glücksrad, Spin, Pulse, Track-Details
+// bingo-start.js (vollständig ersetzen)
+// Sauber implementierte Version: Playlist laden, Wheel bauen mit unterschiedlichen Farben,
+// Spin einmal pro Song -> Kategorie wählen -> Song starten -> Track-Details zeigen (Titel, Interpret, Album, Jahr, hinzugefügt von).
+// Während Song läuft: Rad drücken -> 15s gelb pulsieren -> 5s rot pulsieren -> Song stoppt.
+// Weiter-Button inside Track-Details resetet und bereitet nächsten Song vor.
 
-// --- State ---
 let cachedPlaylistTracks = [];
 let bingoCategories = [];
 let currentPreparedItem = null;
@@ -13,28 +15,20 @@ let isPulsing = false;
 let pulseTimers = [];
 let spotifyReady = null;
 
-// --- Spotify Web Playback SDK readiness (optional) ---
+// Spotify SDK readiness (optional) - keep for playback/device
 spotifyReady = new Promise((resolve) => {
   window.onSpotifyWebPlaybackSDKReady = () => {
     const token = localStorage.getItem('access_token');
     if (!token) { resolve(); return; }
-    const player = new Spotify.Player({
-      name: 'Julster Bingo Player',
-      getOAuthToken: cb => cb(token)
-    });
-    player.addListener('ready', ({ device_id }) => {
-      window.deviceId = device_id;
-      window.bingoPlayer = player;
-      resolve();
-    });
-    player.addListener('initialization_error', ({ message }) => { console.error('SDK init error', message); resolve(); });
-    player.addListener('authentication_error', ({ message }) => { console.error('SDK auth error', message); resolve(); });
-    player.addListener('account_error', ({ message }) => { console.error('SDK account error', message); resolve(); });
-    player.connect().catch(err => { console.warn('SDK connect failed', err); resolve(); });
+    const player = new Spotify.Player({ name: 'Julster Bingo Player', getOAuthToken: cb => cb(token) });
+    player.addListener('ready', ({ device_id }) => { window.deviceId = device_id; window.bingoPlayer = player; resolve(); });
+    player.addListener('initialization_error', ({ message }) => { console.error(message); resolve(); });
+    player.addListener('authentication_error', ({ message }) => { console.error(message); resolve(); });
+    player.connect().catch(e => { console.warn('SDK connect failed', e); resolve(); });
   };
 });
 
-// --- Helpers ---
+// Helpers
 function extractPlaylistId(url) {
   if (!url) return null;
   let m = url.match(/spotify:playlist:([A-Za-z0-9-_]+)/);
@@ -53,24 +47,16 @@ async function fetchPlaylistTracks(playlistId) {
   const limit = 50;
   let offset = 0;
   try {
-    // Meta to get total (more reliable)
-    const metaResp = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!metaResp.ok) {
-      console.error('Playlist meta error', await metaResp.text());
-      return [];
-    }
+    // fetch meta to get total
+    const metaResp = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+    if (!metaResp.ok) { console.error('Playlist meta error', await metaResp.text()); return []; }
     const meta = await metaResp.json();
     const total = meta.tracks?.total || 0;
     while (offset < total) {
       const resp = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!resp.ok) {
-        console.error('Tracks fetch error', await resp.text());
-        break;
-      }
+      if (!resp.ok) { console.error('Tracks fetch error', await resp.text()); break; }
       const data = await resp.json();
       const valid = (data.items || []).filter(i => i && i.track && i.track.uri && !i.is_local);
       all.push(...valid);
@@ -88,9 +74,7 @@ async function fetchUserName(userId) {
   const token = localStorage.getItem('access_token');
   if (!token) return userId;
   try {
-    const resp = await fetch(`https://api.spotify.com/v1/users/${userId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const resp = await fetch(`https://api.spotify.com/v1/users/${userId}`, { headers: { 'Authorization': `Bearer ${token}` } });
     if (!resp.ok) return userId;
     const data = await resp.json();
     return (data.display_name && data.display_name.trim() !== "") ? data.display_name : data.id;
@@ -100,12 +84,10 @@ async function fetchUserName(userId) {
   }
 }
 
-// Play a track; returns true if started (204)
 async function playTrack(uri) {
   const token = localStorage.getItem('access_token');
   if (!token) return false;
   await spotifyReady;
-  // wait a little for deviceId (if SDK used)
   let waited = 0;
   while (!window.deviceId && waited < 4000) { await new Promise(r => setTimeout(r, 200)); waited += 200; }
   try {
@@ -119,7 +101,7 @@ async function playTrack(uri) {
       isPlaying = true;
       return true;
     } else {
-      console.warn('playTrack non-204', resp.status);
+      console.warn('playTrack status', resp.status);
       return false;
     }
   } catch (err) {
@@ -128,21 +110,16 @@ async function playTrack(uri) {
   }
 }
 
-async function stopPlayback() {
+async function pauseTrack() {
   const token = localStorage.getItem('access_token');
   if (!token) return;
   try {
-    await fetch('https://api.spotify.com/v1/me/player/pause', {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-  } catch (err) {
-    console.warn('stopPlayback error', err);
-  }
+    await fetch('https://api.spotify.com/v1/me/player/pause', { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } });
+  } catch (err) { console.warn('pause error', err); }
   isPlaying = false;
 }
 
-// --- Wheel building & labels centered + different colors ---
+// Build wheel with distinct colors and centered labels
 function buildWheel(categories) {
   const wheel = document.getElementById('wheel');
   const container = document.getElementById('wheel-section');
@@ -154,38 +131,28 @@ function buildWheel(categories) {
   container.style.display = 'block';
   const n = categories.length;
   const angle = 360 / n;
-  // build conic-gradient stops with varied HSL
   const stops = [];
   for (let i = 0; i < n; i++) {
     const hue = Math.round((i * (360 / n)) % 360);
-    const color = `hsl(${hue} 75% 50%)`;
+    const color = `hsl(${hue} 75% 48%)`;
     const start = i * angle;
     const end = (i + 1) * angle;
     stops.push(`${color} ${start}deg ${end}deg`);
   }
   wheel.style.background = `conic-gradient(${stops.join(',')})`;
 
-  // place labels centrally in each segment
+  // add labels centrally
   for (let i = 0; i < n; i++) {
     const lbl = document.createElement('div');
     lbl.className = 'wheel-label';
-    // center angle for segment
     const rot = i * angle + angle / 2;
-    // transform: rotate to segment center, translate outward, rotate back so text is upright
-    // translateY negative moves label toward top; use percent for responsiveness
     lbl.style.transform = `rotate(${rot}deg) translateY(-42%) rotate(${-rot}deg)`;
     lbl.style.left = '50%';
     lbl.style.top = '50%';
-    lbl.style.width = '45%';
-    lbl.style.textAlign = 'center';
-    lbl.style.fontWeight = '600';
-    lbl.style.color = '#fff';
-    lbl.style.pointerEvents = 'none';
     lbl.textContent = categories[i];
     wheel.appendChild(lbl);
   }
 
-  // reset rotation to 0
   wheel.style.transition = 'none';
   wheel.style.transform = 'rotate(0deg)';
   setTimeout(() => { wheel.style.transition = 'transform 3s cubic-bezier(.25,.9,.1,1)'; }, 30);
@@ -195,11 +162,11 @@ function resetWheelVisual() {
   const wheel = document.getElementById('wheel');
   wheel.style.transition = 'none';
   wheel.style.transform = 'rotate(0deg)';
-  wheel.classList.remove('pulse-yellow', 'pulse-red');
+  wheel.classList.remove('pulse-yellow','pulse-red');
   setTimeout(() => { wheel.style.transition = 'transform 3s cubic-bezier(.25,.9,.1,1)'; }, 30);
 }
 
-// --- Spin logic ---
+// Spin logic
 async function spinWheelAndPick(categories) {
   if (isSpinning) return null;
   isSpinning = true;
@@ -218,10 +185,9 @@ async function spinWheelAndPick(categories) {
   await new Promise(resolve => {
     const onEnd = () => { wheel.removeEventListener('transitionend', onEnd); resolve(); };
     wheel.addEventListener('transitionend', onEnd);
-    setTimeout(resolve, 3600); // safety
+    setTimeout(resolve, 3600);
   });
 
-  // normalize
   const normalized = finalRotation % 360;
   wheel.style.transition = 'none';
   wheel.style.transform = `rotate(${normalized}deg)`;
@@ -231,17 +197,16 @@ async function spinWheelAndPick(categories) {
   return { index: targetIdx, category: categories[targetIdx] };
 }
 
-// --- Track details (toggle like before) ---
+// Track details toggle (show full metadata)
 function updateTrackDetails(track, addedBy) {
   const detailsContainer = document.getElementById('track-details');
   if (!detailsContainer) return;
   detailsContainer.innerHTML = 'Songinfos auflösen';
-  detailsContainer.style.display = 'none'; // will be shown only after playback started
+  detailsContainer.style.display = 'none'; // shown when playback start triggers
   let expanded = false;
 
   detailsContainer.onclick = async function() {
     if (!expanded) {
-      // fetch added by name if needed
       let addedByName = "unbekannt";
       if (addedBy) {
         if (addedBy.display_name && addedBy.display_name.trim() !== "") {
@@ -255,14 +220,13 @@ function updateTrackDetails(track, addedBy) {
       const album = track.album?.name || '';
       const year = track.album?.release_date ? track.album.release_date.substring(0,4) : '';
       detailsContainer.innerHTML = `
-        <p id="track-title"><strong>Titel:</strong> ${escapeHtml(title)}</p>
-        <p id="track-artist"><strong>Interpret:</strong> ${escapeHtml(artists)}</p>
-        <p id="track-album"><strong>Album:</strong> ${escapeHtml(album)}</p>
-        <p id="track-year"><strong>Jahr:</strong> ${escapeHtml(year)}</p>
-        <p id="track-added"><strong>Hinzugefügt von:</strong> ${escapeHtml(addedByName)}</p>
+        <p><strong>Titel:</strong> ${escapeHtml(title)}</p>
+        <p><strong>Interpret:</strong> ${escapeHtml(artists)}</p>
+        <p><strong>Album:</strong> ${escapeHtml(album)}</p>
+        <p><strong>Jahr:</strong> ${escapeHtml(year)}</p>
+        <p><strong>Hinzugefügt von:</strong> ${escapeHtml(addedByName)}</p>
       `;
 
-      // Weiter-Button inside
       const weiter = document.createElement('button');
       weiter.className = 'btn details-weiter-btn green';
       weiter.textContent = 'Weiter';
@@ -270,14 +234,13 @@ function updateTrackDetails(track, addedBy) {
 
       weiter.addEventListener('click', async (ev) => {
         ev.stopPropagation();
-        // Reset for next song:
+        // Reset: stop pulse, stop playback, reset flags and wheel, hide details, prepare next
         clearPulseTimers();
-        await stopPlayback();
+        await pauseTrack();
         isPlaying = false;
         hasSpunThisSong = false;
         resetWheelVisual();
         detailsContainer.style.display = 'none';
-        // prepare next track
         await prepareNextTrack();
       });
 
@@ -289,13 +252,12 @@ function updateTrackDetails(track, addedBy) {
   };
 }
 
-// --- Pulse logic (15s yellow, 5s red) ---
+// Pulse logic (15s yellow, 5s red)
 function clearPulseTimers() {
   pulseTimers.forEach(t => clearTimeout(t));
   pulseTimers = [];
   const wheel = document.getElementById('wheel');
-  wheel.classList.remove('pulse-yellow');
-  wheel.classList.remove('pulse-red');
+  wheel.classList.remove('pulse-yellow','pulse-red');
   isPulsing = false;
 }
 
@@ -306,16 +268,14 @@ function startPulseDuringPlayback() {
   wheel.classList.remove('pulse-red');
   wheel.classList.add('pulse-yellow');
 
-  // after 15s -> red
   const t1 = setTimeout(() => {
     wheel.classList.remove('pulse-yellow');
     wheel.classList.add('pulse-red');
   }, 15000);
 
-  // after 20s -> stop playback and clear
   const t2 = setTimeout(async () => {
     wheel.classList.remove('pulse-red');
-    await stopPlayback();
+    await pauseTrack();
     isPlaying = false;
     isPulsing = false;
     M.toast({ html: 'Song gestoppt (Discozeit abgelaufen).', classes: 'rounded' });
@@ -324,7 +284,7 @@ function startPulseDuringPlayback() {
   pulseTimers.push(t1, t2);
 }
 
-// --- Prepare next track (pick random but do not play if categories exist) ---
+// Prepare next track (choose random, do not auto-play if categories exist)
 async function prepareNextTrack() {
   if (!cachedPlaylistTracks || cachedPlaylistTracks.length === 0) {
     M.toast({ html: 'Keine weiteren Songs verfügbar.', classes: 'rounded' });
@@ -335,7 +295,6 @@ async function prepareNextTrack() {
   currentPreparedItem = item;
   selectedTrackUri = item.track.uri;
 
-  // hide details until playback started
   const td = document.getElementById('track-details');
   td.style.display = 'none';
   td.innerHTML = 'Songinfos auflösen';
@@ -345,14 +304,12 @@ async function prepareNextTrack() {
   const nowText = document.getElementById('now-playing-text');
 
   if (bingoCategories && bingoCategories.length > 0) {
-    // show wheel & prompt to spin (do NOT auto-play)
     buildWheel(bingoCategories);
     wheelSection.style.display = 'block';
     nowPlaying.style.display = 'block';
     nowText.textContent = 'Kategorie wählen';
     hasSpunThisSong = false;
   } else {
-    // no categories -> play immediately
     wheelSection.style.display = 'none';
     nowPlaying.style.display = 'block';
     nowText.textContent = 'Song läuft …';
@@ -360,22 +317,20 @@ async function prepareNextTrack() {
     if (ok) {
       td.style.display = 'block';
       updateTrackDetails(item.track, item.added_by);
-      // remove played track from cache
       cachedPlaylistTracks = cachedPlaylistTracks.filter(x => x.track && x.track.uri !== selectedTrackUri);
     } else {
-      M.toast({ html: 'Fehler beim Abspielen des Songs (kein aktives Device).', classes: 'rounded' });
+      M.toast({ html: 'Fehler beim Abspielen (kein aktives Device).', classes: 'rounded' });
     }
   }
 }
 
-// --- Wheel click handling: spin OR pulse depending on state ---
+// Wheel click handler
 async function handleWheelClick() {
   if (isSpinning) return;
 
-  const nowPlayingText = document.getElementById('now-playing-text').textContent || '';
   const songIsPlaying = isPlaying === true;
 
-  // If not playing and not spun this song -> spin & start
+  // If not playing and not spun -> spin & start
   if (!songIsPlaying && currentPreparedItem && !hasSpunThisSong && bingoCategories.length > 0) {
     const res = await spinWheelAndPick(bingoCategories);
     if (!res) return;
@@ -384,37 +339,32 @@ async function handleWheelClick() {
     if (ok) {
       isPlaying = true;
       hasSpunThisSong = true;
-      // show details box now song started
       const td = document.getElementById('track-details');
       td.style.display = 'block';
       updateTrackDetails(currentPreparedItem.track, currentPreparedItem.added_by);
-      // remove played track from cache
       cachedPlaylistTracks = cachedPlaylistTracks.filter(x => x.track && x.track.uri !== selectedTrackUri);
-      setTimeout(() => { document.getElementById('now-playing-text').textContent = 'Song läuft …'; }, 300);
+      setTimeout(()=>{ document.getElementById('now-playing-text').textContent = 'Song läuft …'; }, 300);
     } else {
       M.toast({ html: 'Fehler beim Abspielen (kein aktives Spotify-Device).', classes: 'rounded' });
     }
     return;
   }
 
-  // If playing and already spun for this song -> start pulse
+  // If playing and already spun -> pulse
   if (songIsPlaying && hasSpunThisSong && !isPulsing) {
     startPulseDuringPlayback();
     return;
   }
-
-  // else: ignore (e.g., no prepared item)
+  // else ignore
 }
 
-// --- Init & wiring ---
+// Init
 document.addEventListener('DOMContentLoaded', async () => {
   const token = localStorage.getItem('access_token');
   if (!token) { window.location.href = 'index.html'; return; }
 
-  // Read categories & show wheel heading later
   try { bingoCategories = JSON.parse(localStorage.getItem('bingoCategories') || '[]'); } catch { bingoCategories = []; }
 
-  // Load playlist (show loading text until done)
   const playlistUrl = localStorage.getItem('bingoPlaylistUrl') || localStorage.getItem('mobilePlaylistUrl') || '';
   const playlistId = extractPlaylistId(playlistUrl);
   if (!playlistId) {
@@ -423,7 +373,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Show loading indicator until tracks loaded
   document.getElementById('loading-text').style.display = 'block';
   cachedPlaylistTracks = await fetchPlaylistTracks(playlistId);
   document.getElementById('loading-text').style.display = 'none';
@@ -433,30 +382,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Show Start button now
   const startBtn = document.getElementById('start-btn');
   startBtn.style.display = 'inline-block';
 
-  // Wiring: Start -> prepare first track (no autoplay if categories exist)
   startBtn.addEventListener('click', async () => {
     startBtn.style.display = 'none';
     await prepareNextTrack();
   });
 
-  // Build initial wheel if categories present (labels + colors)
-  if (bingoCategories && bingoCategories.length > 0) {
-    buildWheel(bingoCategories);
-  }
+  if (bingoCategories && bingoCategories.length > 0) buildWheel(bingoCategories);
 
-  // Wheel click listener
   const wheelEl = document.getElementById('wheel');
-  wheelEl.addEventListener('click', async () => {
-    await handleWheelClick();
-  });
+  wheelEl.addEventListener('click', async () => { await handleWheelClick(); });
 });
 
-// --- small helper ---
+// helpers
 function escapeHtml(s) {
   if (!s) return '';
-  return String(s).replace(/&/g, '&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
