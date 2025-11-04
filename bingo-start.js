@@ -1,9 +1,4 @@
-// bingo-start.js (vollständig ersetzen)
-// Sauber implementierte Version: Playlist laden, Wheel bauen mit unterschiedlichen Farben,
-// Spin einmal pro Song -> Kategorie wählen -> Song starten -> Track-Details zeigen (Titel, Interpret, Album, Jahr, hinzugefügt von).
-// Während Song läuft: Rad drücken -> 15s gelb pulsieren -> 5s rot pulsieren -> Song stoppt.
-// Weiter-Button inside Track-Details resetet und bereitet nächsten Song vor.
-
+// bingo-start.js - komplette, korrigierte Version
 let cachedPlaylistTracks = [];
 let bingoCategories = [];
 let currentPreparedItem = null;
@@ -15,7 +10,7 @@ let isPulsing = false;
 let pulseTimers = [];
 let spotifyReady = null;
 
-// Spotify SDK readiness (optional) - keep for playback/device
+// Spotify SDK readiness (optional)
 spotifyReady = new Promise((resolve) => {
   window.onSpotifyWebPlaybackSDKReady = () => {
     const token = localStorage.getItem('access_token');
@@ -28,7 +23,7 @@ spotifyReady = new Promise((resolve) => {
   };
 });
 
-// Helpers
+// ---------------- Helpers ----------------
 function extractPlaylistId(url) {
   if (!url) return null;
   let m = url.match(/spotify:playlist:([A-Za-z0-9-_]+)/);
@@ -47,9 +42,11 @@ async function fetchPlaylistTracks(playlistId) {
   const limit = 50;
   let offset = 0;
   try {
-    // fetch meta to get total
     const metaResp = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-    if (!metaResp.ok) { console.error('Playlist meta error', await metaResp.text()); return []; }
+    if (!metaResp.ok) {
+      console.error('Playlist meta error', await metaResp.text());
+      return [];
+    }
     const meta = await metaResp.json();
     const total = meta.tracks?.total || 0;
     while (offset < total) {
@@ -101,7 +98,7 @@ async function playTrack(uri) {
       isPlaying = true;
       return true;
     } else {
-      console.warn('playTrack status', resp.status);
+      console.warn('playTrack non-204', resp.status);
       return false;
     }
   } catch (err) {
@@ -119,7 +116,7 @@ async function pauseTrack() {
   isPlaying = false;
 }
 
-// Build wheel with distinct colors and centered labels
+// ---------------- Wheel rendering ----------------
 function buildWheel(categories) {
   const wheel = document.getElementById('wheel');
   const container = document.getElementById('wheel-section');
@@ -129,9 +126,11 @@ function buildWheel(categories) {
     return;
   }
   container.style.display = 'block';
+
   const n = categories.length;
   const angle = 360 / n;
   const stops = [];
+
   for (let i = 0; i < n; i++) {
     const hue = Math.round((i * (360 / n)) % 360);
     const color = `hsl(${hue} 75% 48%)`;
@@ -141,18 +140,21 @@ function buildWheel(categories) {
   }
   wheel.style.background = `conic-gradient(${stops.join(',')})`;
 
-  // add labels centrally
+  // set CSS variable --r to half of wheel size for label transforms
+  const wheelSize = wheel.clientWidth || parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--wheel-size')) || 180;
+  wheel.style.setProperty('--r', (wheelSize/2) + 'px');
+
   for (let i = 0; i < n; i++) {
     const lbl = document.createElement('div');
     lbl.className = 'wheel-label';
     const rot = i * angle + angle / 2;
-    lbl.style.transform = `rotate(${rot}deg) translateY(-42%) rotate(${-rot}deg)`;
-    lbl.style.left = '50%';
-    lbl.style.top = '50%';
+    // Use translateY with CSS variable --r for pixel-accurate placement
+    lbl.style.transform = `rotate(${rot}deg) translateY(calc(-1 * var(--r) * 0.58)) rotate(${-rot}deg)`;
     lbl.textContent = categories[i];
     wheel.appendChild(lbl);
   }
 
+  // reset wheel rotation
   wheel.style.transition = 'none';
   wheel.style.transform = 'rotate(0deg)';
   setTimeout(() => { wheel.style.transition = 'transform 3s cubic-bezier(.25,.9,.1,1)'; }, 30);
@@ -166,7 +168,7 @@ function resetWheelVisual() {
   setTimeout(() => { wheel.style.transition = 'transform 3s cubic-bezier(.25,.9,.1,1)'; }, 30);
 }
 
-// Spin logic
+// ---------------- Spin logic ----------------
 async function spinWheelAndPick(categories) {
   if (isSpinning) return null;
   isSpinning = true;
@@ -197,16 +199,17 @@ async function spinWheelAndPick(categories) {
   return { index: targetIdx, category: categories[targetIdx] };
 }
 
-// Track details toggle (show full metadata)
+// ---------------- Track details (toggle & Weiter) ----------------
 function updateTrackDetails(track, addedBy) {
   const detailsContainer = document.getElementById('track-details');
   if (!detailsContainer) return;
-  detailsContainer.innerHTML = 'Songinfos auflösen';
-  detailsContainer.style.display = 'none'; // shown when playback start triggers
+  detailsContainer.innerHTML = 'Songinfos auflösen'; // collapsed text
+  detailsContainer.style.display = 'none'; // initially hidden until playback started
   let expanded = false;
 
   detailsContainer.onclick = async function() {
     if (!expanded) {
+      // fetch addedBy display name if necessary
       let addedByName = "unbekannt";
       if (addedBy) {
         if (addedBy.display_name && addedBy.display_name.trim() !== "") {
@@ -234,7 +237,7 @@ function updateTrackDetails(track, addedBy) {
 
       weiter.addEventListener('click', async (ev) => {
         ev.stopPropagation();
-        // Reset: stop pulse, stop playback, reset flags and wheel, hide details, prepare next
+        // Reset everything for next song:
         clearPulseTimers();
         await pauseTrack();
         isPlaying = false;
@@ -252,7 +255,7 @@ function updateTrackDetails(track, addedBy) {
   };
 }
 
-// Pulse logic (15s yellow, 5s red)
+// ---------------- Pulse (15s yellow, 5s red) ----------------
 function clearPulseTimers() {
   pulseTimers.forEach(t => clearTimeout(t));
   pulseTimers = [];
@@ -284,7 +287,7 @@ function startPulseDuringPlayback() {
   pulseTimers.push(t1, t2);
 }
 
-// Prepare next track (choose random, do not auto-play if categories exist)
+// ---------------- Prepare next track ----------------
 async function prepareNextTrack() {
   if (!cachedPlaylistTracks || cachedPlaylistTracks.length === 0) {
     M.toast({ html: 'Keine weiteren Songs verfügbar.', classes: 'rounded' });
@@ -304,12 +307,14 @@ async function prepareNextTrack() {
   const nowText = document.getElementById('now-playing-text');
 
   if (bingoCategories && bingoCategories.length > 0) {
+    // show wheel and wait for spin
     buildWheel(bingoCategories);
     wheelSection.style.display = 'block';
     nowPlaying.style.display = 'block';
     nowText.textContent = 'Kategorie wählen';
     hasSpunThisSong = false;
   } else {
+    // no categories -> auto play
     wheelSection.style.display = 'none';
     nowPlaying.style.display = 'block';
     nowText.textContent = 'Song läuft …';
@@ -324,13 +329,12 @@ async function prepareNextTrack() {
   }
 }
 
-// Wheel click handler
+// ---------------- Wheel click handler ----------------
 async function handleWheelClick() {
   if (isSpinning) return;
-
   const songIsPlaying = isPlaying === true;
 
-  // If not playing and not spun -> spin & start
+  // not playing & not spun yet -> spin -> start
   if (!songIsPlaying && currentPreparedItem && !hasSpunThisSong && bingoCategories.length > 0) {
     const res = await spinWheelAndPick(bingoCategories);
     if (!res) return;
@@ -350,21 +354,24 @@ async function handleWheelClick() {
     return;
   }
 
-  // If playing and already spun -> pulse
+  // playing & already spun -> pulse
   if (songIsPlaying && hasSpunThisSong && !isPulsing) {
     startPulseDuringPlayback();
     return;
   }
-  // else ignore
+  // otherwise ignore
 }
 
-// Init
+// ---------------- Init ----------------
 document.addEventListener('DOMContentLoaded', async () => {
+  // token present?
   const token = localStorage.getItem('access_token');
   if (!token) { window.location.href = 'index.html'; return; }
 
+  // read categories
   try { bingoCategories = JSON.parse(localStorage.getItem('bingoCategories') || '[]'); } catch { bingoCategories = []; }
 
+  // load playlist
   const playlistUrl = localStorage.getItem('bingoPlaylistUrl') || localStorage.getItem('mobilePlaylistUrl') || '';
   const playlistId = extractPlaylistId(playlistUrl);
   if (!playlistId) {
@@ -382,21 +389,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  // show Start button
   const startBtn = document.getElementById('start-btn');
   startBtn.style.display = 'inline-block';
 
   startBtn.addEventListener('click', async () => {
     startBtn.style.display = 'none';
+    // show wheel area and prepare first track
+    document.getElementById('wheel-section').style.display = 'block';
     await prepareNextTrack();
   });
 
-  if (bingoCategories && bingoCategories.length > 0) buildWheel(bingoCategories);
+  // if categories already exist, build wheel so labels/colors are ready when shown
+  if (bingoCategories && bingoCategories.length > 0) {
+    buildWheel(bingoCategories);
+  }
 
+  // wheel click wiring
   const wheelEl = document.getElementById('wheel');
   wheelEl.addEventListener('click', async () => { await handleWheelClick(); });
 });
 
-// helpers
+// ---------------- small helper ----------------
 function escapeHtml(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
