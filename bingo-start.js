@@ -9,6 +9,10 @@ let hasSpun = false;
 let hasPulsed = false;
 let rotation = 0;
 
+let pulseTimeoutYellow = null;
+let pulseTimeoutRed = null;
+
+// === Spotify / Playlist ===
 function extractPlaylistId(url){
   if(!url) return null;
   let m=url.match(/spotify:playlist:([A-Za-z0-9-_]+)/);
@@ -19,7 +23,6 @@ function extractPlaylistId(url){
   return m?m[1]:null;
 }
 
-// Tracks laden (Spotify API)
 async function fetchPlaylistTracks(playlistId){
   const token=localStorage.getItem('access_token');
   if(!token) return [];
@@ -42,7 +45,6 @@ async function fetchPlaylistTracks(playlistId){
   }catch(e){console.error(e);return [];}
 }
 
-// Spotify Web Playback SDK init
 spotifyReady = new Promise(resolve=>{
   window.onSpotifyWebPlaybackSDKReady=()=>{
     const token=localStorage.getItem('access_token');
@@ -89,6 +91,7 @@ function getRandomTrack(tracks){
   return tracks[idx];
 }
 
+// === Track Details ===
 function updateTrackDetailsElement(track){
   const details=document.getElementById('track-details');
   if(!details) return;
@@ -111,8 +114,10 @@ function updateTrackDetailsElement(track){
       details.appendChild(weiter);
       weiter.addEventListener('click',async(ev)=>{
         ev.stopPropagation();
-        await stopPlayback(); // Song stoppen beim Nächstes Lied
-        hasSpun=false; hasPulsed=false;
+        await stopPlayback();
+        stopPulse(); // 🔸 Pulsieren abbrechen
+        hasSpun=false;
+        hasPulsed=false;
         document.getElementById('now-playing').style.display='none';
         document.getElementById('selected-category').textContent='';
       });
@@ -124,7 +129,7 @@ function updateTrackDetailsElement(track){
   };
 }
 
-// --- Glücksrad zeichnen ---
+// === Glücksrad ===
 function drawWheel(){
   const canvas=document.getElementById('wheel-canvas');
   const ctx=canvas.getContext('2d');
@@ -150,34 +155,66 @@ function drawWheel(){
   }
 }
 
-// --- Glücksrad drehen ---
+// Drehanimation mit realer Kategorie-Bestimmung
 function spinWheel(){
-  const canvas=document.getElementById('wheel-canvas');
-  const count=categories.length;
-  const arc=360/count;
-  const spin=3600+Math.floor(Math.random()*360);
-  rotation+=spin;
-  canvas.style.transform=`rotate(${rotation}deg)`;
-  const picked=(count - Math.floor(((rotation%360)/arc)))%count;
-  return categories[picked];
+  return new Promise(resolve=>{
+    const canvas=document.getElementById('wheel-canvas');
+    const count=categories.length;
+    const arc=360/count;
+
+    const spin=3600 + Math.floor(Math.random()*360);
+    const startRotation=rotation;
+    const targetRotation=startRotation+spin;
+    const startTime=performance.now();
+    const duration=5000;
+
+    function animate(now){
+      const elapsed=now-startTime;
+      const t=Math.min(elapsed/duration,1);
+      const ease=1 - Math.pow(1-t,3);
+      const current=startRotation + (spin*ease);
+      canvas.style.transform=`rotate(${current}deg)`;
+      if(t<1) requestAnimationFrame(animate);
+      else{
+        rotation=targetRotation;
+        const normalized = ((rotation % 360) + 360) % 360;
+        const index = Math.floor((count - (normalized / arc)) % count);
+        const category = categories[index];
+        resolve(category);
+      }
+    }
+    requestAnimationFrame(animate);
+  });
 }
 
-// --- Pulsation + Buzzer ---
+// === Pulsieren + Buzzer ===
 function pulseWheel(){
   return new Promise(resolve=>{
     const wheel=document.getElementById('wheel-container');
     const buzzer=document.getElementById('buzzer-sound');
+    stopPulse(); // Sicherheitsreset
+
     wheel.classList.add('pulse-yellow');
-    setTimeout(()=>{
+    pulseTimeoutYellow=setTimeout(()=>{
       wheel.classList.remove('pulse-yellow');
       wheel.classList.add('pulse-red');
-      setTimeout(()=>{
+      pulseTimeoutRed=setTimeout(()=>{
         wheel.classList.remove('pulse-red');
         buzzer.currentTime=0; buzzer.play().catch(()=>{});
         resolve();
       },5000);
     },15000);
   });
+}
+
+// 🔸 Pulsation vollständig abbrechen
+function stopPulse(){
+  const wheel=document.getElementById('wheel-container');
+  wheel.classList.remove('pulse-yellow','pulse-red');
+  clearTimeout(pulseTimeoutYellow);
+  clearTimeout(pulseTimeoutRed);
+  pulseTimeoutYellow=null;
+  pulseTimeoutRed=null;
 }
 
 // === Hauptlogik ===
@@ -217,22 +254,21 @@ document.addEventListener('DOMContentLoaded',async()=>{
 
       wheelCanvas.addEventListener('click',async()=>{
         if(!hasSpun){
-          const category=spinWheel();
-          selectedCategoryDiv.textContent='';
-          setTimeout(async()=>{
-            selectedCategoryDiv.textContent="Kategorie: "+category;
-            const item=getRandomTrack(cachedPlaylistTracks);
-            if(!item||!item.track)return;
-            selectedTrackUri=item.track.uri;
-            await playTrack(selectedTrackUri);
-            updateTrackDetailsElement(item.track);
-            nowPlaying.style.display='block';
-            cachedPlaylistTracks=cachedPlaylistTracks.filter(x=>x.track&&x.track.uri!==selectedTrackUri);
-            hasSpun=true;
-            hasPulsed=false;
-          },5000);
+          const category = await spinWheel();
+          selectedCategoryDiv.textContent='Kategorie: '+category;
+
+          const item=getRandomTrack(cachedPlaylistTracks);
+          if(!item||!item.track)return;
+          selectedTrackUri=item.track.uri;
+          await playTrack(selectedTrackUri);
+          updateTrackDetailsElement(item.track);
+          nowPlaying.style.display='block';
+          cachedPlaylistTracks=cachedPlaylistTracks.filter(x=>x.track&&x.track.uri!==selectedTrackUri);
+          hasSpun=true;
+          hasPulsed=false;
           return;
         }
+
         if(!hasPulsed){
           await pulseWheel();
           await stopPlayback();
