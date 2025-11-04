@@ -1,26 +1,29 @@
-// === bingo-start.js (aktualisiert) ===
-// Änderung: korrekte Segment-Auswahl nach Drehung + stopPulse() spielt Buzzer beim Abbrechen
+// ===== bingo-start.js (FIX für Anzeige + korrekte Segment-Auswahl + Pulse-Abbruch) =====
 
 let cachedPlaylistTracks = [];
 let selectedTrackUri = null;
 let spotifyReady = null;
 
-let wheelCanvas, wheelCtx, categories = [];
+// DOM / Wheel
+let canvasEl = null;
+let wheelContainer = null;
+let wheelCtx = null;
+let categories = [];
+
+// State
 let hasSpun = false;
 let hasPulsed = false;
+let currentAngle = 0; // radians
 
-// Rotationstate (radians)
-let currentAngle = 0;
-
-// Puls-Timer / Resolver (damit Puls abbrechbar ist)
+// Pulse timers / resolver
 let pulseTimeoutYellow = null;
 let pulseTimeoutRed = null;
-let pulseResolve = null;
+let pulseResolver = null;
 
-// Buzzer (wird beim Ende oder beim Abbrechen gespielt)
-const buzzerEl = document.getElementById ? document.getElementById('buzzer-sound') : null;
+// Buzzer element (from HTML)
+const buzzerEl = typeof document !== 'undefined' ? document.getElementById('buzzer-sound') : null;
 
-/* ---------------- Spotify / Playlist (unverändert) ---------------- */
+/* ----------------- Spotify / Playlist (unverändert) ----------------- */
 function extractPlaylistId(url){
   if(!url) return null;
   let m = url.match(/spotify:playlist:([A-Za-z0-9-_]+)/);
@@ -34,19 +37,17 @@ function extractPlaylistId(url){
 async function fetchPlaylistTracks(playlistId){
   const token = localStorage.getItem('access_token');
   if(!token) return [];
-  const all = []; const limit = 50; let offset = 0;
+  const all = [];
+  const limit = 50;
+  let offset = 0;
   try {
-    const metaResp = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!metaResp.ok) { console.error('Playlist meta fetch failed'); return []; }
+    const metaResp = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+    if (!metaResp.ok) return [];
     const meta = await metaResp.json();
     const total = meta.tracks?.total || 0;
     while (offset < total) {
-      const resp = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!resp.ok) { console.error('Tracks fetch error'); break; }
+      const resp = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (!resp.ok) break;
       const data = await resp.json();
       const valid = (data.items || []).filter(i => i && i.track && i.track.uri && !i.is_local);
       all.push(...valid);
@@ -103,14 +104,14 @@ async function stopPlayback(){
 
 function getRandomTrack(arr){ if(!arr || !arr.length) return null; return arr[Math.floor(Math.random()*arr.length)]; }
 
-/* ---------------- Track UI ---------------- */
+/* ----------------- Track details UI + "Nächstes Lied" ----------------- */
 function updateTrackDetailsElement(track){
   const details = document.getElementById('track-details');
   if(!details) return;
   let expanded = false;
   details.textContent = 'Songinfos auflösen';
   details.onclick = () => {
-    if (!expanded) {
+    if(!expanded){
       details.innerHTML = `
         <div>
           <p><strong>Titel:</strong> ${track.name}</p>
@@ -119,31 +120,29 @@ function updateTrackDetailsElement(track){
           <p><strong>Jahr:</strong> ${track.album.release_date ? track.album.release_date.substring(0,4) : ''}</p>
         </div>
       `;
-      const weiter = document.createElement('button');
-      weiter.className = 'btn details-weiter-btn green';
-      weiter.textContent = 'Nächstes Lied';
-      weiter.type = 'button';
-      details.appendChild(weiter);
+      const btn = document.createElement('button');
+      btn.className = 'btn details-weiter-btn green';
+      btn.textContent = 'Nächstes Lied';
+      btn.type = 'button';
+      details.appendChild(btn);
 
-      weiter.addEventListener('click', async (ev) => {
+      btn.addEventListener('click', async (ev) => {
         ev.stopPropagation();
-        // 1) stoppe Playback sofort
+        // 1) stoppt Playback
         await stopPlayback();
-        // 2) breche Pulsation ab (inkl. Buzzer)
-        stopPulse(true); // true => spiele Buzzer beim Abbrechen
-        // 3) reset Flags / UI
+        // 2) bricht Pulsation ab (inkl. Buzzer als Feedback)
+        stopPulse(true);
+        // 3) reset flags & UI
         hasSpun = false;
         hasPulsed = false;
-        // hide now playing
         document.getElementById('now-playing').style.display = 'none';
         document.getElementById('selected-category').textContent = '';
-        // reset wheel visual rotation
-        const canvas = document.getElementById('wheel-canvas');
-        canvas.style.transition = 'none';
-        canvas.style.transform = 'rotate(0deg)';
+        // reset wheel visual
+        canvasEl.style.transition = 'none';
+        canvasEl.style.transform = 'rotate(0deg)';
         currentAngle = 0;
-        // small redraw to ensure correct display
-        setTimeout(()=> { setupCanvas(); drawWheel(); }, 20);
+        // slight delay then redraw to avoid visual glitch
+        setTimeout(() => { setupCanvas(); drawWheel(); }, 20);
       });
 
       expanded = true;
@@ -154,107 +153,101 @@ function updateTrackDetailsElement(track){
   };
 }
 
-/* ---------------- Canvas / Wheel drawing ---------------- */
+/* ----------------- Canvas setup + draw ----------------- */
 function setupCanvas(){
-  wheelCanvas = document.getElementById('wheel-canvas');
-  // ensure css width/height are used as size
-  const rect = wheelCanvas.getBoundingClientRect();
+  canvasEl = document.getElementById('wheel-canvas');
+  if(!canvasEl) return;
+  // size based on computed css size
+  const rect = canvasEl.getBoundingClientRect();
   const dpr = Math.max(window.devicePixelRatio || 1, 1);
   const size = Math.round(rect.width);
-  wheelCanvas.width = size * dpr;
-  wheelCanvas.height = size * dpr;
-  wheelCanvas.style.width = rect.width + 'px';
-  wheelCanvas.style.height = rect.width + 'px';
-  wheelCtx = wheelCanvas.getContext('2d');
+  canvasEl.width = size * dpr;
+  canvasEl.height = size * dpr;
+  canvasEl.style.width = rect.width + 'px';
+  canvasEl.style.height = rect.width + 'px';
+  wheelCtx = canvasEl.getContext('2d');
   wheelCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
 function drawWheel(){
-  if(!wheelCanvas) setupCanvas();
-  const canvas = wheelCanvas;
-  const ctx = wheelCtx;
-  const size = canvas.width / (window.devicePixelRatio || 1);
-  const cx = size/2;
-  const cy = size/2;
-  const r = size/2;
-  const n = Math.max(categories.length,1);
-  const arc = (2*Math.PI)/n;
+  if(!canvasEl) setupCanvas();
+  if(!wheelCtx) return;
+  const dpr = Math.max(window.devicePixelRatio || 1, 1);
+  const cssSize = canvasEl.width / dpr;
+  const cx = cssSize/2;
+  const r = cssSize/2;
+  const n = Math.max(categories.length, 1);
+  const arc = (2 * Math.PI) / n;
 
-  ctx.clearRect(0,0,size,size);
-
-  const palette = ['#ffd8cc','#e6f7ff','#e8e8ff','#dfffe6','#fff7d9','#fde2f3','#e6f2ff','#e9f8f3','#fff0d9','#f0e6ff'];
+  wheelCtx.clearRect(0,0,canvasEl.width/dpr, canvasEl.height/dpr);
+  const palette = ['#ffd8cc','#e6f7ff','#e8e8ff','#dfffe6','#fff7d9','#fde2f3','#e6f2ff','#e9f8f3'];
 
   for(let i=0;i<n;i++){
     const start = i*arc;
     const end = (i+1)*arc;
-    ctx.beginPath();
-    ctx.moveTo(cx,cy);
-    ctx.arc(cx,cy,r,start,end);
-    ctx.closePath();
-    ctx.fillStyle = palette[i % palette.length];
-    ctx.fill();
-    // thin stroke
-    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    wheelCtx.beginPath();
+    wheelCtx.moveTo(cx, cx);
+    wheelCtx.arc(cx, cx, r, start, end);
+    wheelCtx.closePath();
+    wheelCtx.fillStyle = palette[i % palette.length];
+    wheelCtx.fill();
+    wheelCtx.strokeStyle = 'rgba(0,0,0,0.06)';
+    wheelCtx.lineWidth = 1;
+    wheelCtx.stroke();
 
-    // text - larger and responsive
-    ctx.save();
-    ctx.translate(cx,cy);
-    ctx.rotate(start + arc/2);
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#222';
-    const fontSize = Math.max(12, Math.floor(size/20));
-    ctx.font = `bold ${fontSize}px Roboto, Arial`;
+    // text larger & truncated if needed
+    wheelCtx.save();
+    wheelCtx.translate(cx, cx);
+    wheelCtx.rotate(start + arc/2);
+    wheelCtx.textAlign = 'right';
+    wheelCtx.fillStyle = '#222';
+    const fontSize = Math.max(12, Math.floor(cssSize / 20));
+    wheelCtx.font = `bold ${fontSize}px Roboto, Arial`;
     let text = categories[i] || `Kategorie ${i+1}`;
-    // truncate if too long
-    while (ctx.measureText(text).width > r * 0.95 && text.length>0) text = text.slice(0,-1);
-    if (text.length < (categories[i]||'').length) text = text.slice(0,-1) + '…';
-    ctx.fillText(text, r - 10, fontSize/3);
-    ctx.restore();
+    // truncate text until it fits
+    while (wheelCtx.measureText(text).width > r * 0.95 && text.length > 0) text = text.slice(0, -1);
+    if (text.length < (categories[i] || '').length) text = text.slice(0, -1) + '…';
+    wheelCtx.fillText(text, r - 10, fontSize/3);
+    wheelCtx.restore();
   }
 }
 
-/* ---------------- Spin (deterministisch auf gewählten Index) ---------------- */
+/* ----------------- Deterministic spin -> chosen index ----------------- */
 function spinWheelAsync(){
   return new Promise(resolve => {
-    const n = Math.max(categories.length,1);
-    const segmentAngle = (2*Math.PI)/n;
-    // choose random target index
-    const chosen = Math.floor(Math.random()*n);
-    // compute theta (center) of chosen
-    const thetaChosen = chosen*segmentAngle + segmentAngle/2;
-    // compute final delta: rotations * 2π + offset so that chosen center aligns with pointer (-PI/2)
-    const rotations = 5 + Math.floor(Math.random()*3); // 5..7 rotations
-    const base = (-Math.PI/2 - thetaChosen);
-    const jitter = (Math.random()*0.2) - 0.1;
-    const finalDelta = rotations*2*Math.PI + base + jitter;
+    const n = Math.max(categories.length, 1);
+    const segmentAngle = (2 * Math.PI) / n;
+    // chosen index
+    const chosen = Math.floor(Math.random() * n);
+    const thetaChosen = chosen * segmentAngle + segmentAngle / 2;
+    const rotations = 5 + Math.floor(Math.random() * 3); // 5..7
+    const base = (-Math.PI / 2 - thetaChosen);
+    const jitter = (Math.random() * 0.2) - 0.1;
+    const finalDelta = rotations * 2 * Math.PI + base + jitter;
 
     currentAngle += finalDelta;
     const deg = currentAngle * 180 / Math.PI;
-    // apply transform
-    wheelCanvas.style.transition = 'transform 4.6s cubic-bezier(0.33,1,0.68,1)';
-    wheelCanvas.style.transform = `rotate(${deg}deg)`;
+    canvasEl.style.transition = 'transform 4.6s cubic-bezier(0.33,1,0.68,1)';
+    canvasEl.style.transform = `rotate(${deg}deg)`;
 
-    // wait for transition end
     const onEnd = (e) => {
       if (e.propertyName !== 'transform') return;
-      wheelCanvas.removeEventListener('transitionend', onEnd);
+      canvasEl.removeEventListener('transitionend', onEnd);
       resolve(chosen);
     };
-    wheelCanvas.addEventListener('transitionend', onEnd);
+    canvasEl.addEventListener('transitionend', onEnd);
   });
 }
 
-/* ---------------- Pulsation (abbrechbar) ---------------- */
+/* ----------------- Pulsation (abbrechbar) ----------------- */
 function pulseWheel(){
   return new Promise(resolve => {
     const container = document.getElementById('wheel-container');
-    // safety
+    // safety: clear any previous
     stopPulse(false);
 
     container.classList.add('pulse-yellow');
-    pulseResolve = resolve;
+    pulseResolver = resolve;
 
     pulseTimeoutYellow = setTimeout(() => {
       container.classList.remove('pulse-yellow');
@@ -262,45 +255,44 @@ function pulseWheel(){
 
       pulseTimeoutRed = setTimeout(() => {
         container.classList.remove('pulse-red');
-        // natural end -> play buzzer
+        // natural end => play buzzer
         try { if (buzzerEl) { buzzerEl.currentTime = 0; buzzerEl.play().catch(()=>{}); } } catch(e){}
-        const r = pulseResolve; pulseResolve = null;
-        resolve(); // normal finish
+        const r = pulseResolver; pulseResolver = null;
+        resolve();
       }, 5000);
     }, 15000);
   });
 }
 
-// stopPulse(aborted) -> when aborted===true we play buzzer sound as feedback
+// stopPulse(aborted=true) -> clears timers and resolves pending promise; plays buzzer if aborted===true
 function stopPulse(aborted = true){
   const container = document.getElementById('wheel-container');
-  if(!container) return;
-  container.classList.remove('pulse-yellow','pulse-red');
+  if(container) container.classList.remove('pulse-yellow','pulse-red');
   if(pulseTimeoutYellow){ clearTimeout(pulseTimeoutYellow); pulseTimeoutYellow = null; }
   if(pulseTimeoutRed){ clearTimeout(pulseTimeoutRed); pulseTimeoutRed = null; }
-  if(pulseResolve){
-    // if there is a pending resolve, resolve it now (aborted)
-    const resolver = pulseResolve;
-    pulseResolve = null;
-    try { if (aborted && buzzerEl) { buzzerEl.currentTime = 0; buzzerEl.play().catch(()=>{}); } } catch(e){}
-    resolver(); // resolve the promise returned by pulseWheel
+  if(pulseResolver){
+    const r = pulseResolver; pulseResolver = null;
+    if (aborted) {
+      try { if (buzzerEl) { buzzerEl.currentTime = 0; buzzerEl.play().catch(()=>{}); } } catch(e){}
+    }
+    r(); // resolve the pulse promise immediately
   }
 }
 
-/* ---------------- Hauptlogik ---------------- */
+/* ----------------- Main initialization ----------------- */
 document.addEventListener('DOMContentLoaded', async () => {
-  const token = localStorage.getItem('access_token');
-  if(!token){ window.location.href='index.html'; return; }
+  canvasEl = document.getElementById('wheel-canvas');
+  wheelContainer = document.getElementById('wheel-container');
 
   const loading = document.getElementById('loading-text');
   const startBtn = document.getElementById('start-btn');
-  const wheelContainer = document.getElementById('wheel-container');
   const selectedCategoryDiv = document.getElementById('selected-category');
   const nowPlaying = document.getElementById('now-playing');
 
-  // references
-  wheelCanvas = document.getElementById('wheel-canvas');
+  const token = localStorage.getItem('access_token');
+  if(!token){ window.location.href = 'index.html'; return; }
 
+  // load tracks
   const playlistUrl = localStorage.getItem('bingoPlaylistUrl') || localStorage.getItem('mobilePlaylistUrl') || '';
   const playlistId = extractPlaylistId(playlistUrl);
   if(!playlistId){ loading.textContent = 'Keine gültige Playlist gefunden.'; return; }
@@ -314,73 +306,72 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // show start button
+  // show start button once tracks loaded
   startBtn.style.display = 'inline-block';
 
-  // load categories
-  categories = JSON.parse(localStorage.getItem('bingoCategories') || '[]');
+  // Try both keys (bingoCategories OR mobileCategories) to match your other flows
+  let stored = localStorage.getItem('bingoCategories');
+  if(!stored) stored = localStorage.getItem('mobileCategories');
+  categories = stored ? JSON.parse(stored) : [];
 
-  // prepare and draw wheel (if active)
+  // draw wheel only if categories exist (preserve your desired behavior)
   setupCanvas();
   if(Array.isArray(categories) && categories.length > 0){
+    // wheel remains hidden until Start pressed (as you requested)
     drawWheel();
   } else {
-    // no categories -> hide wheel container (fallback)
-    wheelContainer.style.display = 'none';
+    // nothing to show — wheel stays hidden
+    console.log('No categories found; wheel will not be shown until categories exist.');
   }
 
-  // Start click
+  // ensure click handler attached on start
   startBtn.addEventListener('click', () => {
     startBtn.style.display = 'none';
     if(Array.isArray(categories) && categories.length > 0){
+      // show wheel and ensure proper drawing after visible
       wheelContainer.style.display = 'block';
-      // ensure canvas sized & redrawn
       setupCanvas(); drawWheel();
 
-      // attach handler once
-      if(!wheelCanvas._hasHandler){
-        wheelCanvas.addEventListener('click', async () => {
+      if(!canvasEl._clickAttached){
+        canvasEl.addEventListener('click', async () => {
           try {
             if(!hasSpun){
-              // spin, get chosen index, then start song
               const chosen = await spinWheelAsync();
               const category = categories[chosen] || '';
               selectedCategoryDiv.textContent = 'Kategorie: ' + category;
 
-              // pick random track and play (only after spin finished)
+              // play a random track (after spin)
               const item = getRandomTrack(cachedPlaylistTracks);
-              if(!item || !item.track) { if(window.M) M.toast({ html: 'Kein Song verfügbar', classes: 'rounded' }); return; }
+              if(!item || !item.track){ if(window.M) M.toast({ html:'Kein Song verfügbar', classes:'rounded' }); return; }
               selectedTrackUri = item.track.uri;
               const ok = await playTrack(selectedTrackUri);
-              if(!ok && window.M) M.toast({ html: 'Fehler beim Abspielen des Songs', classes: 'rounded' });
+              if(!ok && window.M) M.toast({ html:'Fehler beim Abspielen des Songs', classes:'rounded' });
               updateTrackDetailsElement(item.track);
               nowPlaying.style.display = 'block';
-              // remove played
               cachedPlaylistTracks = cachedPlaylistTracks.filter(x => x.track && x.track.uri !== selectedTrackUri);
               hasSpun = true;
               hasPulsed = false;
             } else if(hasSpun && !hasPulsed){
-              // start pulsation; await its natural completion (or user can abort)
+              // start pulsation; await finish (or user aborts via Nächstes Lied)
               await pulseWheel();
-              // natural end -> ensure playback stopped
+              // natural end: stop playback
               await stopPlayback();
               hasPulsed = true;
             } else {
-              if(window.M) M.toast({ html: 'Bitte "Nächstes Lied" drücken, um fortzufahren.', classes: 'rounded' });
+              if(window.M) M.toast({ html:'Bitte "Nächstes Lied" drücken, um fortzufahren.', classes:'rounded' });
             }
-          } catch (e) {
-            console.error('wheel click error', e);
-          }
+          } catch (e) { console.error('wheel click error', e); }
         });
-        wheelCanvas._hasHandler = true;
+        canvasEl._clickAttached = true;
       }
     } else {
-      // fallback: no categories
+      // fallback if no categories: original behavior -> play immediate random track
       (async () => {
         const item = getRandomTrack(cachedPlaylistTracks);
-        if(!item || !item.track) { if(window.M) M.toast({ html: 'Kein Song verfügbar', classes: 'rounded' }); return; }
+        if(!item || !item.track){ if(window.M) M.toast({ html:'Kein Song verfügbar', classes:'rounded' }); return; }
         selectedTrackUri = item.track.uri;
-        await playTrack(selectedTrackUri);
+        const ok = await playTrack(selectedTrackUri);
+        if(!ok && window.M) M.toast({ html:'Fehler beim Abspielen des Songs', classes:'rounded' });
         updateTrackDetailsElement(item.track);
         nowPlaying.style.display = 'block';
         cachedPlaylistTracks = cachedPlaylistTracks.filter(x => x.track && x.track.uri !== selectedTrackUri);
@@ -388,13 +379,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // redraw on resize for responsiveness
+  // redraw on resize
   let rt = null;
   window.addEventListener('resize', () => {
     clearTimeout(rt);
-    rt = setTimeout(() => {
-      setupCanvas();
-      if(Array.isArray(categories) && categories.length > 0) drawWheel();
-    }, 120);
+    rt = setTimeout(()=>{ setupCanvas(); if(Array.isArray(categories) && categories.length>0) drawWheel(); }, 120);
   });
 });
