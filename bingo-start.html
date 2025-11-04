@@ -56,20 +56,21 @@
       transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1);
     }
 
-    /* 🔽 Pfeil korrekt nach unten drehend */
-    #wheel-pointer {
-      position: absolute;
-      top: -28px;
-      left: 50%;
-      transform: translateX(-50%) rotate(0deg); /* Spitze zeigt jetzt wirklich nach unten */
-      width: 0;
-      height: 0;
-      border-left: 16px solid transparent;
-      border-right: 16px solid transparent;
-      border-bottom: 28px solid #e53935; /* nach unten gerichtet */
-      z-index: 20;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
-    }
+/* 🔽 Pfeil korrekt nach unten */
+#wheel-pointer {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%) rotate(180deg);
+  width: 0;
+  height: 0;
+  border-left: 16px solid transparent;
+  border-right: 16px solid transparent;
+  border-top: 28px solid #e53935; /* zeigt nach unten */
+  z-index: 20;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+}
+
 
     #selected-category {
       font-size: 1.3rem;
