@@ -5,19 +5,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Bingo — Start</title>
 
-  <!-- Materialize CSS (für Toasts etc.) -->
+  <!-- Materialize CSS für Toasts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"/>
 
-  <!-- Spotify SDK (optional, SDK wird verwendet wenn verfügbar) -->
+  <!-- Spotify Web Playback SDK (optional) -->
   <script src="https://sdk.scdn.co/spotify-player.js"></script>
 
   <style>
-    :root { --wheel-size: 320px; }
-    body { font-family: Roboto, sans-serif; background:#fafafa; margin:0; min-height:100vh; padding-bottom:110px; }
+    :root { --wheel-size: 340px; }
+    body { margin:0; font-family: Roboto, sans-serif; background:#fafafa; min-height:100vh; padding-bottom:120px; }
     .center-area { text-align:center; margin-top:8vh; }
 
-    #loading-text { margin-top:18px; font-size:1.05rem; color:#555; }
+    #loading-text { font-size:1.05rem; color:#555; margin-top:12px; }
 
+    /* großer runder Start-Button */
     #start-btn {
       display:none;
       width:130px; height:130px;
@@ -28,59 +29,52 @@
       box-shadow:0 6px 14px rgba(0,0,0,0.16);
     }
 
-    /* Wheel / heading */
-    #wheel-section { margin-top:30px; display:none; }
-    #spin-title {
-      font-size:1.6rem; font-weight:700; color:#222; margin-bottom:12px;
-    }
-
+    /* Wheel Section */
+    #wheel-section { display:none; margin-top:26px; }
+    #spin-title { font-size:1.6rem; font-weight:700; color:#222; margin-bottom:14px; }
     #wheel-container { margin:0 auto; width:var(--wheel-size); height:var(--wheel-size); position:relative; }
     #wheel {
       width:100%; height:100%; border-radius:50%;
       overflow:hidden; position:relative;
       transition: transform 3s cubic-bezier(.25,.9,.1,1);
       transform: rotate(0deg);
-      box-shadow:0 8px 20px rgba(0,0,0,0.12);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
     }
-
-    /* labels - placed and rotated so text sits centered in segment */
     .wheel-label {
       position:absolute;
       left:50%; top:50%;
-      transform-origin: 0 0;
-      width:45%; /* width of label box */
-      white-space:nowrap;
+      width:45%;
       text-align:center;
       font-weight:600;
       color:#fff;
       pointer-events:none;
       font-size:0.95rem;
     }
-
-    /* pointer */
     #wheel-pointer {
-      position:absolute; top:-8px; left:50%; transform:translateX(-50%);
+      position:absolute; top:-10px; left:50%; transform:translateX(-50%);
       width:0; height:0;
-      border-left:10px solid transparent; border-right:10px solid transparent;
-      border-bottom:14px solid #e74c3c; z-index:30;
+      border-left:12px solid transparent; border-right:12px solid transparent;
+      border-bottom:16px solid #e74c3c; z-index:30;
     }
 
-    /* Now playing & track details (track-details hidden until after spin/play) */
-    #now-playing { margin-top:28px; display:none; }
+    /* Pulsation: gelb -> rot */
+    .pulse-yellow { animation: pulseYellow 1s infinite ease-in-out; box-shadow: 0 0 48px 14px rgba(255,230,130,0.95); filter:brightness(1.1); }
+    .pulse-red    { animation: pulseRed 0.8s infinite ease-in-out;  box-shadow: 0 0 60px 18px rgba(255,60,60,0.95); }
+    @keyframes pulseYellow { 0%,100%{box-shadow:0 0 12px rgba(255,230,130,0.6);} 50%{box-shadow:0 0 48px rgba(255,230,130,1);} }
+    @keyframes pulseRed    { 0%,100%{box-shadow:0 0 12px rgba(255,60,60,0.4);} 50%{box-shadow:0 0 60px rgba(255,0,0,0.95);} }
+
+    /* Now playing + Trackdetails */
+    #now-playing { margin-top:26px; display:none; }
     #now-playing-text { font-size:2.1rem; font-weight:700; color:#222; margin-bottom:12px; }
     #track-details {
-      background:#f5f5f5; border-radius:12px; padding:18px; width:92%; max-width:560px; margin:0 auto;
+      background:#f5f5f5; border-radius:12px; padding:18px; width:90%; max-width:560px; margin:0 auto;
       text-align:left; display:none; cursor:pointer;
     }
-    .details-weiter-btn { display:block; margin:18px auto 0; width:80%; max-width:360px; font-size:1.05rem; }
+    .details-weiter-btn { display:block; margin:18px auto 0; width:80%; max-width:360px; font-size:1.02rem; }
 
-    /* Pulse effects for disco-mode */
-    .pulse-white { animation: pulseWhite 1s infinite ease-in-out; box-shadow: 0 0 48px 12px rgba(255,255,255,0.95); filter:brightness(1.12); }
-    .pulse-red { animation: pulseRed 0.8s infinite ease-in-out; box-shadow: 0 0 60px 18px rgba(255,60,60,0.98); filter:brightness(1.05); }
-    @keyframes pulseWhite { 0%,100%{box-shadow:0 0 12px rgba(255,255,255,0.6);} 50%{box-shadow:0 0 48px rgba(255,255,255,1);} }
-    @keyframes pulseRed   { 0%,100%{box-shadow:0 0 12px rgba(255,60,60,0.45);} 50%{box-shadow:0 0 60px rgba(255,0,0,0.95);} }
-
+    /* Zum Menü unten mittig */
     #menu-bottom-btn { position:fixed; left:50%; transform:translateX(-50%); bottom:12px; z-index:20; padding:8px 22px; border-radius:25px; display:flex; align-items:center; justify-content:center; }
+
     #empty-warning { margin-top:20px; display:none; }
   </style>
 </head>
@@ -90,11 +84,11 @@
 
     <button id="start-btn" class="btn-large green">Start</button>
 
-    <div id="wheel-section">
+    <div id="wheel-section" aria-hidden="true">
       <div id="spin-title">Spin the wheel</div>
       <div id="wheel-container">
         <div id="wheel-pointer" aria-hidden="true"></div>
-        <div id="wheel" role="button" aria-label="Rad drehen / Kategorie wählen"></div>
+        <div id="wheel" role="button" aria-label="Rad drehen"></div>
       </div>
     </div>
 
@@ -111,7 +105,7 @@
 
   <a id="menu-bottom-btn" class="btn orange" href="menu.html">Zum Menü</a>
 
-  <!-- Materialize (Toast) -->
+  <!-- Materialize -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
   <script src="bingo-start.js" defer></script>
 </body>
