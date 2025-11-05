@@ -53,41 +53,42 @@
       height: 100%;
       border-radius: 50%;
       background: white;
-      transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1);
+      /* transform wird via JS gesetzt */
     }
 
-#wheel-pointer {
-  position: absolute;
-  top: -12px;                      
-  left: 50%;
-  transform: translateX(-50%) rotate(180deg); /* umgedreht */
-  width: 4px;                      
-  height: 36px;                    
-  background: #e53935;             
-  border-radius: 2px;              
-  z-index: 30;
-  box-shadow: 0 0 6px rgba(0,0,0,0.6); /* dunkler weicher Schatten */
-  pointer-events: none;
-}
-
-#wheel-pointer::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  top: -6px; /* weil Linie auf dem Kopf steht */
-  width: 10px;
-  height: 6px;
-  background: #e53935;
-  border-radius: 2px;
-  box-shadow: 0 0 5px rgba(0,0,0,0.5);
-}
+    /* Indikator: gerade Linie (zeigt nach unten, mit Schatten) */
+    #wheel-pointer {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%) rotate(180deg); /* umgedreht - Spitze nach unten */
+      width: 4px;
+      height: 36px;
+      background: #e53935;
+      border-radius: 2px;
+      z-index: 30;
+      box-shadow: 0 0 8px rgba(0,0,0,0.6); /* weicher schwarzer Schatten */
+      pointer-events: none;
+    }
+    #wheel-pointer::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      top: -6px; /* weil Linie auf dem Kopf steht */
+      width: 10px;
+      height: 6px;
+      background: #e53935;
+      border-radius: 2px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    }
 
     #selected-category {
       font-size: 1.3rem;
       margin-top: 10px;
       font-weight: 600;
       color: #333;
+      min-height: 1.4em;
     }
 
     #now-playing {
@@ -133,7 +134,7 @@
     .pulse-yellow { animation: pulse-yellow 1s infinite; }
     .pulse-red { animation: pulse-red 1s infinite; }
 
-    /* 🟠 Menü-Button mittig zentriert */
+    /* Menü-Button mittig zentriert */
     #menu-bottom-btn {
       position: fixed;
       left: 50%;
@@ -150,6 +151,12 @@
       text-align: center;
       font-size: 1rem;
     }
+
+    /* kleine responsive Anpassung */
+    @media (max-width: 480px) {
+      #wheel-container { width: 92vw; height: 92vw; }
+      #start-btn { width: 110px; height: 110px; line-height: 110px; }
+    }
   </style>
 </head>
 <body>
@@ -159,13 +166,13 @@
     <button id="start-btn" class="btn-large green">Start</button>
 
     <!-- Glücksrad -->
-    <div id="wheel-container">
+    <div id="wheel-container" aria-hidden="true">
       <div id="wheel-pointer" aria-hidden="true"></div>
-      <canvas id="wheel-canvas" width="400" height="400"></canvas>
+      <canvas id="wheel-canvas" width="400" height="400" role="img" aria-label="Glücksrad"></canvas>
       <div id="selected-category" aria-live="polite"></div>
     </div>
 
-    <div id="now-playing">
+    <div id="now-playing" aria-live="polite">
       <div id="now-playing-text">Song läuft …</div>
       <div id="track-details">Songinfos auflösen</div>
     </div>
