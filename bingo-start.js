@@ -122,7 +122,7 @@ function getRandomTrack(tracks) {
 }
 
 // === Track Details ===
-function updateTrackDetailsElement(track) {
+function updateTrackDetailsElement(track, discokugelActive = false) {
   const details = document.getElementById('track-details');
   if (!details) return;
   let expanded = false;
@@ -148,11 +148,22 @@ function updateTrackDetailsElement(track) {
       weiter.addEventListener('click', async ev => {
         ev.stopPropagation();
         await stopPlayback();
-        stopPulse(); // 🔸 Pulsieren abbrechen
-        hasSpun = false;
-        hasPulsed = false;
-        document.getElementById('now-playing').style.display = 'none';
-        document.getElementById('selected-category').textContent = '';
+        stopPulse();
+
+        if (discokugelActive) {
+          hasSpun = false;
+          hasPulsed = false;
+          document.getElementById('now-playing').style.display = 'none';
+          document.getElementById('selected-category').textContent = '';
+        } else {
+          // Standardmodus: direkt neuen Song starten
+          const nextTrack = getRandomTrack(cachedPlaylistTracks);
+          if (!nextTrack || !nextTrack.track) return;
+          selectedTrackUri = nextTrack.track.uri;
+          await playTrack(selectedTrackUri);
+          updateTrackDetailsElement(nextTrack.track, false);
+          cachedPlaylistTracks = cachedPlaylistTracks.filter(x => x.track && x.track.uri !== selectedTrackUri);
+        }
       });
 
       expanded = true;
@@ -197,27 +208,20 @@ function drawWheel() {
   }
 }
 
-// Drehanimation mit realer Kategorie-Bestimmung (korrekt für Pfeil nach unten)
 function spinWheel() {
   return new Promise(resolve => {
     const canvas = document.getElementById('wheel-canvas');
     const count = categories.length;
     const arc = 360 / count;
-
-    // Ziel: zufällige Kategorie -> daraus exakte Drehung berechnen
     const chosenIndex = Math.floor(Math.random() * count);
-    // Kleine zufällige Abweichung innerhalb des Segments (+/- bis 20% vom Segmentwinkel)
-    const randomOffset = (Math.random() - 0.5) * arc * 0.4; // ±20% Spielraum
+    const randomOffset = (Math.random() - 0.5) * (arc * 0.6);
     const targetAngle = (360 - (chosenIndex * arc) - arc / 2 + 270 + randomOffset) % 360;
 
-
-    // Drehung: mehrere volle Runden + exakter Zielwinkel
     const spins = 5;
     const finalRotation = rotation + spins * 360 + targetAngle;
-
     const startRotation = rotation;
     const startTime = performance.now();
-    const duration = 5000;
+    const duration = 3000; // 3 Sekunden
 
     function animate(now) {
       const elapsed = now - startTime;
@@ -230,10 +234,8 @@ function spinWheel() {
         requestAnimationFrame(animate);
       } else {
         rotation = finalRotation % 360;
-
-        // Bestimme den tatsächlichen Index unter dem Pfeil (unten bei 270°)
         const normalized = (rotation + 360) % 360;
-        const angleFromBottom = (normalized + 90) % 360; // Pfeil unten = 270°
+        const angleFromBottom = (normalized + 90) % 360;
         const index = Math.floor((count - angleFromBottom / arc)) % count;
         const category = categories[index];
         resolve(category);
@@ -244,12 +246,12 @@ function spinWheel() {
   });
 }
 
-// === Pulsieren + Buzzer ===
+// === Pulsieren ===
 function pulseWheel() {
   return new Promise(resolve => {
     const wheel = document.getElementById('wheel-container');
     const buzzer = document.getElementById('buzzer-sound');
-    stopPulse(); // Sicherheitsreset
+    stopPulse();
 
     wheel.classList.add('pulse-yellow');
 
@@ -267,7 +269,6 @@ function pulseWheel() {
   });
 }
 
-// 🔸 Pulsation vollständig abbrechen
 function stopPulse() {
   const wheel = document.getElementById('wheel-container');
   wheel.classList.remove('pulse-yellow', 'pulse-red');
@@ -315,22 +316,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       wheelCanvas.addEventListener('click', async () => {
         if (!hasSpun) {
-          // Starte die Drehung
           const category = await spinWheel();
-
-          // Warte einen Moment nach Ende der Animation
           await new Promise(r => setTimeout(r, 300));
-
-          // Kategorie anzeigen
           selectedCategoryDiv.textContent = 'Kategorie: ' + category;
 
-          // Jetzt erst Song starten
           const item = getRandomTrack(cachedPlaylistTracks);
           if (!item || !item.track) return;
           selectedTrackUri = item.track.uri;
-
           await playTrack(selectedTrackUri);
-          updateTrackDetailsElement(item.track);
+          updateTrackDetailsElement(item.track, true);
           nowPlaying.style.display = 'block';
 
           cachedPlaylistTracks = cachedPlaylistTracks.filter(x => x.track && x.track.uri !== selectedTrackUri);
@@ -347,18 +341,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
   } else {
-    // Standard-Bingo ohne Discokugel
     startBtn.addEventListener('click', async () => {
       startBtn.style.display = 'none';
       nowPlaying.style.display = 'block';
-
       const track = getRandomTrack(cachedPlaylistTracks);
       if (!track || !track.track) return;
       selectedTrackUri = track.track.uri;
-
       await playTrack(selectedTrackUri);
-      updateTrackDetailsElement(track.track);
-
+      updateTrackDetailsElement(track.track, false);
       cachedPlaylistTracks = cachedPlaylistTracks.filter(x => x.track && x.track.uri !== selectedTrackUri);
     });
   }
