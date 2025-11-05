@@ -56,21 +56,34 @@
       transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1);
     }
 
-/* 🔽 Pfeil korrekt nach unten */
-#wheel-pointer {
-  position: absolute;
-  top: -28px;
-  left: 50%;
-  transform: translateX(-50%) rotate(90deg);
-  width: 0;
-  height: 0;
-  border-left: 16px solid transparent;
-  border-right: 16px solid transparent;
-  border-top: 28px solid #e53935; /* zeigt nach unten */
-  z-index: 20;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
-}
+    /* 🔽 Indikator: gerade Linie (statt Dreieck) */
+    #wheel-pointer {
+      position: absolute;
+      top: -12px;                      /* knapp über dem Rad */
+      left: 50%;
+      transform: translateX(-50%);     /* zentrieren */
+      width: 4px;                      /* Linienbreite */
+      height: 36px;                    /* Linienenhöhe */
+      background: #e53935;             /* Farbe */
+      border-radius: 2px;              /* leicht abgerundet */
+      z-index: 30;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.18);
+      pointer-events: none;
+    }
 
+    /* Optional: kleine Spitze an der Unterkante der Linie, damit der "Treffpunkt" klarer ist */
+    #wheel-pointer::after{
+      content: "";
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: -6px;
+      width: 10px;
+      height: 6px;
+      background: #e53935;
+      border-radius: 2px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
 
     #selected-category {
       font-size: 1.3rem;
@@ -149,9 +162,9 @@
 
     <!-- Glücksrad -->
     <div id="wheel-container">
-      <div id="wheel-pointer"></div>
+      <div id="wheel-pointer" aria-hidden="true"></div>
       <canvas id="wheel-canvas" width="400" height="400"></canvas>
-      <div id="selected-category"></div>
+      <div id="selected-category" aria-live="polite"></div>
     </div>
 
     <div id="now-playing">
