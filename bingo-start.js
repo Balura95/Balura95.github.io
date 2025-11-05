@@ -206,7 +206,10 @@ function spinWheel() {
 
     // Ziel: zufällige Kategorie -> daraus exakte Drehung berechnen
     const chosenIndex = Math.floor(Math.random() * count);
-    const targetAngle = (360 - (chosenIndex * arc) - arc / 2 + 270) % 360;
+    // Kleine zufällige Abweichung innerhalb des Segments (+/- bis 20% vom Segmentwinkel)
+    const randomOffset = (Math.random() - 0.5) * arc * 0.4; // ±20% Spielraum
+    const targetAngle = (360 - (chosenIndex * arc) - arc / 2 + 270 + randomOffset) % 360;
+
 
     // Drehung: mehrere volle Runden + exakter Zielwinkel
     const spins = 5;
