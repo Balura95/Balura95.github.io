@@ -162,19 +162,17 @@ function spinWheel() {
     const count = categories.length;
     const arc = 360 / count;
 
-    // 🔹 Zufällige Kategorie auswählen
+    // Ziel: zufällige Kategorie -> daraus exakte Drehung berechnen
     const chosenIndex = Math.floor(Math.random() * count);
+    const targetAngle = (360 - (chosenIndex * arc) - arc / 2 + 270) % 360;
 
-    // 🔹 Für nach UNTEN zeigenden Pfeil: 90° Offset (statt 270°!)
-    const targetAngle = (360 - (chosenIndex * arc) - arc / 2 + 90) % 360;
-
-    // 🔹 Drehung über mehrere volle Umdrehungen + Zielwinkel
-    const spins = 5;
+    // Drehung: mehrere volle Runden + exakter Zielwinkel
+    const spins = 5; // volle Umdrehungen
     const finalRotation = rotation + spins * 360 + targetAngle;
 
     const startRotation = rotation;
     const startTime = performance.now();
-    const duration = 3000; // 🔸 3 Sekunden
+    const duration = 5000;
 
     function animate(now) {
       const elapsed = now - startTime;
@@ -188,9 +186,10 @@ function spinWheel() {
       } else {
         rotation = finalRotation % 360;
 
-        // 🔹 Berechne tatsächliche Kategorie unter dem nach unten zeigenden Pfeil
+        // Bestimme den tatsächlichen Index unter dem Pfeil (unten bei 270°)
         const normalized = (rotation + 360) % 360;
-        const index = Math.floor((count - normalized / arc)) % count;
+        const angleFromBottom = (normalized + 90) % 360; // Pfeil unten = 270°
+        const index = Math.floor((count - angleFromBottom / arc)) % count;
 
         const category = categories[index];
         resolve(category);
@@ -200,6 +199,7 @@ function spinWheel() {
     requestAnimationFrame(animate);
   });
 }
+
 
 // === Pulsieren + Buzzer ===
 function pulseWheel(){
