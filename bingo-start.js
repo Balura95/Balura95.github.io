@@ -172,7 +172,7 @@ function spinWheel() {
 
     const startRotation = rotation;
     const startTime = performance.now();
-    const duration = 3000; // ⏱️ verkürzt auf 3 Sekunden
+    const duration = 1000; // ⏱️ verkürzt auf 3 Sekunden
 
     function animate(now) {
       const elapsed = now - startTime;
