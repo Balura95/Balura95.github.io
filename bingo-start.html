@@ -56,34 +56,32 @@
       transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1);
     }
 
-    /* 🔽 Indikator: gerade Linie (statt Dreieck) */
-    #wheel-pointer {
-      position: absolute;
-      top: -12px;                      /* knapp über dem Rad */
-      left: 50%;
-      transform: translateX(-50%);     /* zentrieren */
-      width: 4px;                      /* Linienbreite */
-      height: 36px;                    /* Linienenhöhe */
-      background: #e53935;             /* Farbe */
-      border-radius: 2px;              /* leicht abgerundet */
-      z-index: 30;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.18);
-      pointer-events: none;
-    }
+#wheel-pointer {
+  position: absolute;
+  top: -12px;                      
+  left: 50%;
+  transform: translateX(-50%) rotate(180deg); /* umgedreht */
+  width: 4px;                      
+  height: 36px;                    
+  background: #e53935;             
+  border-radius: 2px;              
+  z-index: 30;
+  box-shadow: 0 0 6px rgba(0,0,0,0.6); /* dunkler weicher Schatten */
+  pointer-events: none;
+}
 
-    /* Optional: kleine Spitze an der Unterkante der Linie, damit der "Treffpunkt" klarer ist */
-    #wheel-pointer::after{
-      content: "";
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      bottom: -6px;
-      width: 10px;
-      height: 6px;
-      background: #e53935;
-      border-radius: 2px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-    }
+#wheel-pointer::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: -6px; /* weil Linie auf dem Kopf steht */
+  width: 10px;
+  height: 6px;
+  background: #e53935;
+  border-radius: 2px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
 
     #selected-category {
       font-size: 1.3rem;

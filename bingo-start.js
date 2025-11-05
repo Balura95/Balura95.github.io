@@ -267,21 +267,31 @@ document.addEventListener('DOMContentLoaded',async()=>{
       drawWheel();
 
       wheelCanvas.addEventListener('click',async()=>{
-        if(!hasSpun){
-          const category = await spinWheel();
-          selectedCategoryDiv.textContent='Kategorie: '+category;
+        if (!hasSpun) {
+            // Starte die Drehung
+            const category = await spinWheel();
 
-          const item=getRandomTrack(cachedPlaylistTracks);
-          if(!item||!item.track)return;
-          selectedTrackUri=item.track.uri;
-          await playTrack(selectedTrackUri);
-          updateTrackDetailsElement(item.track);
-          nowPlaying.style.display='block';
-          cachedPlaylistTracks=cachedPlaylistTracks.filter(x=>x.track&&x.track.uri!==selectedTrackUri);
-          hasSpun=true;
-          hasPulsed=false;
-          return;
+            // Warte einen ganz kurzen Moment nach Ende der Animation (sanftes Timing)
+            await new Promise(r => setTimeout(r, 300));
+
+            // Kategorie anzeigen
+            selectedCategoryDiv.textContent = 'Kategorie: ' + category;
+
+            // Jetzt erst den Song wählen und abspielen
+            const item = getRandomTrack(cachedPlaylistTracks);
+            if (!item || !item.track) return;
+            selectedTrackUri = item.track.uri;
+
+            await playTrack(selectedTrackUri);
+            updateTrackDetailsElement(item.track);
+            nowPlaying.style.display = 'block';
+
+            cachedPlaylistTracks = cachedPlaylistTracks.filter(x => x.track && x.track.uri !== selectedTrackUri);
+            hasSpun = true;
+            hasPulsed = false;
+            return;
         }
+
 
         if(!hasPulsed){
           await pulseWheel();
